@@ -49,7 +49,7 @@ def _import(db,datasets):
         db[paper]['fivepUTR']  += sheet.col_values(colx=4, start_rowx=3, end_rowx=41)
         db[paper]['CDS']       += sheet.col_values(colx=5, start_rowx=3, end_rowx=41)
         db[paper]['fluo_mean'] += sheet.col_values(colx=9, start_rowx=3, end_rowx=41)
-        db[paper]['fluo_std']  += sheet.col_values(colx=10, start_rowx=3, end_rowx=41)       
+        db[paper]['fluo_std']  += sheet.col_values(colx=10, start_rowx=3, end_rowx=41)
         
         num_seqs = len(db[paper]['xls_ID'])
         
@@ -93,13 +93,13 @@ def _import(db,datasets):
         
         db[paper]['CDS']       = sheet.col_values(colx=6, start_rowx=3, end_rowx=75)
         db[paper]['fluo_mean'] = sheet.col_values(colx=16, start_rowx=3, end_rowx=75)
-        db[paper]['fluo_std']  = sheet.col_values(colx=17, start_rowx=3, end_rowx=75)        
+        db[paper]['fluo_std']  = sheet.col_values(colx=17, start_rowx=3, end_rowx=75)
         
         num_seqs = len(db[paper]['xls_ID'])
         
         db[paper]['num_seqs'] = num_seqs
         db[paper]['temp']     = [37.0]*num_seqs
-        db[paper]['protein']  = sheet.col_values(colx=1, start_rowx=3, end_rowx=75) 
+        db[paper]['protein']  = sheet.col_values(colx=1, start_rowx=3, end_rowx=75)
         db[paper]['organism'] = ["Escherichia coli str. K-12 substr. DH10B"]*num_seqs
         db[paper]['info']     = ["{}_{}".format(host,protein) for host,protein \
                                  in zip(db[paper]['organism'],db[paper]['protein'])]
@@ -132,7 +132,7 @@ def _import(db,datasets):
         db[paper]['fivepUTR']  = sheet.col_values(colx=3, start_rowx=6, end_rowx=42)
         db[paper]['CDS']       = sheet.col_values(colx=4, start_rowx=6, end_rowx=42)
         db[paper]['fluo_mean'] = sheet.col_values(colx=9, start_rowx=6, end_rowx=42)
-        db[paper]['fluo_std']  = sheet.col_values(colx=10, start_rowx=6, end_rowx=42)        
+        db[paper]['fluo_std']  = sheet.col_values(colx=10, start_rowx=6, end_rowx=42)
         
         num_seqs = len(db[paper]['xls_ID'])
         
@@ -345,7 +345,7 @@ def _import(db,datasets):
         db[paper]['fivepUTR']  = sheet.col_values(colx=6, start_rowx=3, end_rowx=146)
         db[paper]['CDS']       = sheet.col_values(colx=7, start_rowx=3, end_rowx=146)
         db[paper]['fluo_mean'] = sheet.col_values(colx=8, start_rowx=3, end_rowx=146)
-        db[paper]['fluo_std']  = sheet.col_values(colx=9, start_rowx=3, end_rowx=146)              
+        db[paper]['fluo_std']  = sheet.col_values(colx=9, start_rowx=3, end_rowx=146)
         db[paper]['num_seqs'] = len(db[paper]['xls_ID'])
         db[paper]['temp']     = [37.0]*db[paper]['num_seqs']
         
@@ -401,9 +401,9 @@ def _import(db,datasets):
         
         path = _get_filepath(paper)
         wb = xlrd.open_workbook(path,'rb')
-        data = {}    
+        data = {}
         
-        data['authors'] = "Sriram Kosuri, Daniel B. Goodman, George M. Church, et al."
+        data['authors'] = "Sriram Kosuri, Daniel B. Goodman, George M. Church"
         data['title'] = "Composability of regulatory sequences controlling transcription and translation in Escherichia coli"
         data['journal'] = "Proc Natl Acad Sci USA, 2013, Vol. 110 no. 34"
         data['abbrev'] = "Kosuri2013"        
