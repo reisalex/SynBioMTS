@@ -6,7 +6,6 @@ from openpyxl import load_workbook
 import xlrd
 
 def add_dataset(db,datasets):
-    
 
     '''Amin Espah Borujeni, Anirudh S. Channarasappa, & Howard M. Salis
     Translation rate is controlled by coupled trade-offs between site accessibility, select RNA unfolding and sliding at upstream standby sites
@@ -25,6 +24,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=9, start_rowx=5, end_rowx=141),
             "PROTEIN"   : "RFP",
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -66,6 +66,7 @@ def add_dataset(db,datasets):
             "PROT.STD"      : sheet.col_values(colx=17, start_rowx=3, end_rowx=75),
             "PROTEIN"       : sheet.col_values(colx=1, start_rowx=3, end_rowx=75),
             "ORGANISM"      : "Escherichia coli str. K-12 substr. DH10B",
+            "METHOD"        : "Individually Characterized",
             "TEMP"          : 37.0,
             "PAPER"         : paper
         }
@@ -96,6 +97,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=10, start_rowx=6, end_rowx=42),
             "PROTEIN"   : "RFP",
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -124,6 +126,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=11, start_rowx=5, end_rowx=32),
             "PROTEIN"   : "RFP",
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -170,6 +173,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=5, start_rowx=3, end_rowx=135),
             "PROTEIN"   : "RFP",
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -199,6 +203,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=10, start_rowx=1, end_rowx=146),
             "PROTEIN"   : sheet.col_values(colx=3, start_rowx=1, end_rowx=146),
             "ORGANISM"  : sheet.col_values(colx=2, start_rowx=1, end_rowx=146),
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -228,6 +233,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=13, start_rowx=2, end_rowx=26),
             "PROTEIN"   : sheet.col_values(colx=3, start_rowx=2, end_rowx=26),
             "ORGANISM"  : sheet.col_values(colx=2, start_rowx=2, end_rowx=26),
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -256,6 +262,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : sheet.col_values(colx=9, start_rowx=3, end_rowx=146),
             "PROTEIN"   : "NanoLuc",
             "ORGANISM"  : "Bacteroides thetaiotaomicron VPI-5482",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -285,6 +292,7 @@ def add_dataset(db,datasets):
             "PROT.STD"  : None,
             "PROTEIN"   : "sfGFP",
             "ORGANISM"  : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
             "PAPER"     : paper
         }
@@ -355,6 +363,7 @@ def add_dataset(db,datasets):
             "COUNT.DNA"     : np.array(sheet.col_values(colx=36, start_rowx=1, end_rowx=9337)),
             "PROTEIN"       : "sfGFP",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
             "PAPER"         : paper
         }
@@ -418,6 +427,7 @@ def add_dataset(db,datasets):
             "COUNT.B.RNA"   : np.array(sheet.col_values(colx=8, start_rowx=1, end_rowx=6598)),
             "PROTEIN"       : "sfGFP",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
             "PAPER"         : paper
         }
@@ -435,6 +445,25 @@ def add_dataset(db,datasets):
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
 
+    db = _make_categories(db)
+
+    return db
+
+def _make_categories(db):
+    # categories save some memory
+    db["PROTEIN"]  = db["PROTEIN"].astype('category')
+    db["ORGANISM"] = db["ORGANISM"].astype('category')
+    db["METHOD"]   = db["METHOD"].astype('category')
+    db["PAPER"]    = db["PAPER"].astype('category')
+
+    # And let's define sub-groups of sequences categorized:
+    # At the same time, in the same organism, with the same promoter, and same experimental conditions
+    info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["PAPER"],db["ORGANISM"],db["PROTEIN"])]
+    db["subgroups"] = pd.Series(info, dtype="category")
+    
+    # Get list of categories
+    # print db["subgroups"].cat.categories
+    
     return db
 
 def run_FS_calcs(ds,data):
