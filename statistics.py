@@ -36,11 +36,11 @@ class statistics(object):
             ValueError(error)
 
     def vartest2(self,x,y,alpha=0.05,test="F"):
-        # Two-sample F-test/Barlett-test/Levene-test for equal variances
-        # Returns:
-        #   h (bool)  = test decision, True if the test rejects the null hypothesis
-        #   S (float) = the test statistic
-        #   pvalue (float) = the p-value for significance of test decision
+        '''Two-sample F-test/Barlett-test/Levene-test for equal variances
+        Returns:
+            h (bool)  = test decision, True if the test rejects the null hypothesis
+            S (float) = the test statistic
+            pvalue (float) = the p-value for significance of test decision'''
 
         if test == "F":
             df1 = len(x)-1
@@ -63,21 +63,21 @@ class statistics(object):
         return (h,statistic,pvalue)
 
     def ttest2(self,x,y,alpha=0.05):
-        # Two sample t-test
-        # Returns:
-        #   h (bool)  = test decision, True if the test rejects the null hypothesis
-        #   t (float) = the test statistic
-        #   pvalue (float) = the p-value for significance of test decision
+        '''Two sample t-test
+        Returns:
+            h (bool)  = test decision, True if the test rejects the null hypothesis
+            t (float) = the test statistic
+            pvalue (float) = the p-value for significance of test decision'''
 
         (t,pvalue) = stats.ttest_ind(x,y,equal_var=False,nan_policy='omit')
         h = pvalue < alpha
         return (h,t,pvalue)
 
     def fit_linear_model(self,x,y,slope=None):
-        # Linear least squares (LSQ) linear regression (polynomial fit of degree=1)
-        # Returns:
-        #   m (float) = slope of linear regression line of form (y = m*x + b)
-        #   b (float) = intercept of linear regression line
+        '''Linear least squares (LSQ) linear regression (polynomial fit of degree=1)
+        Returns:
+            m (float) = slope of linear regression line of form (y = m*x + b)
+            b (float) = intercept of linear regression line'''
 
         assert len(x)==len(y), "Arrays x & Y must be of equal length to fit linear regression model."
 
@@ -95,12 +95,12 @@ class statistics(object):
         return (m,b)
 
     def ANOVA(self,X,y,coeffs):
-        # Univariate linear regression tests
-        # Quick linear model for sequentially testing the effect of many regressors
-        # Using scikit learn's Feature selection toolbox
-        # Returns:
-        #   F (array) = F-values for regressors
-        #   pvalues (array) = p-values for F-scores
+        '''Univariate linear regression tests
+        Quick linear model for sequentially testing the effect of many regressors
+        Using scikit learn's Feature selection toolbox
+        Returns:
+            F (array) = F-values for regressors
+            pvalues (array) = p-values for F-scores'''
 
         # Compute regressors as product of predictors and the coeffs of a model
         (m,n) = np.shape(X)
@@ -111,10 +111,10 @@ class statistics(object):
         return (F,pvalues)
 
     def mad(self,x):
-        # Median absolute deviation
-        # Returns:
-        #   MAD (float) = the median absolute deviation of the values in X
-        #   diff (list) = a list of deviations of the values in X from the median of X
+        '''Median absolute deviation
+        Returns:
+            MAD (float) = the median absolute deviation of the values in X
+            diff (list) = a list of deviations of the values in X from the median of X'''
         median = np.median(x)
         diff = np.absolute(x - median)
         MAD = np.median(diff)
@@ -123,24 +123,46 @@ class statistics(object):
     '''Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and Handle Outliers",
     The ASQC Basic References in Quality Control: Statistical Techniques, Edward F. Mykytka, Ph.D., Editor.'''  
     def find_outliers(self,x,threshold=2):
-        # Outlier detection method using Iglewicz & Hoaglin's modified Z-score
-        # Returns a list of bools, where True is an outlier
+        '''Outlier detection method using Iglewicz & Hoaglin's modified Z-score
+        Returns a list of bools, where True is an outlier'''
         (MAD,diff) = self.mad(x)
         M = 0.6745 * diff / MAD
         outliers = M > threshold
         return outliers
 
-    def empirical_cdf(self):
-        # both raw count and probability
-        pass
+    def empirical_cdf(self,data,bins,rangemin=None,rangemax=None):
+        '''Calculate the empirical cumulative distribution function (ecdf) for some data
+        Inputs:
+            data (array) = data to calculate ecdf of
+            bins (int/array) = same behavior as numpy.histogram (int defines number of bins, array specifies bin edges)
+            rangemin/rangemax (float) = must be specified if bins is of type=int, and rangemin < rangemax
+        Returns:
+            ecdf (array) = empirical cumulative distribution function (probabilities)
+            edges (array) = edges used during binning of histogram'''
+
+        assert any(isinstance(bins,t) for t in [int,list]), "bins must either be an integer or a list corresponding to the edges"
+
+        if isinstance(bins,int):
+            assert bins > 1, "number of bins must be greater than 1."
+            assert rangemin < rangemax, "rangemin must be less than rangemax"
+            assert rangemin is not None and rangemax is not None, "rangemin and rangemax must be specified if bins is an integer."
+            edges = np.linspace(rangemin,rangemax,bins+1)
+
+        elif isinstance(bins,list):
+            edges = np.array(bins)
+
+        h = np.histogram(data,edges)
+        ecdf = np.cumsum(h)/len(data)
+
+        return ecdf,edges
 
     def auroc(self,predictions,observations,cutoff=None,n=50):
-        # Calculate ROC curve and the area under the curve (auc)
-        # Returns:
-        #   auroc (float) = area under the ROC curve
-        #   fpr (array) = false positive rates, where fpr[i] is the FPR at threshold, thresholds[i]
-        #   tpr (array) =  true positive rates, where tpr[i] is the TPR at threshold, thresholds[i]
-        #   thresholds (array) = thresholds from ROC curve
+        '''Calculate ROC curve and the area under the curve (auc)
+        Returns:
+            auroc (float) = area under the ROC curve
+            fpr (array) = false positive rates, where fpr[i] is the FPR at threshold, thresholds[i]
+            tpr (array) =  true positive rates, where tpr[i] is the TPR at threshold, thresholds[i]
+            thresholds (array) = thresholds from ROC curve'''
 
         # define outcomes as TRUE/FALSE defined by cutoff
         if cutoff == None: cutoff = np.median(outcomes)
@@ -178,12 +200,12 @@ class statistics(object):
         return auroc,fpr,tpr,thresholds
 
     def normKLdiv(self,data,b):
-        # Calculate normalized Kullback-Leibler divergence
-        # normKLdiv uses data and calculates the normKLdiv relative to a random model (Q) over bin range (-b,b)
-        # Returns:
-        #   NKLdiv (float)   = normalized Kullback-Leibler divergence
-        #   KLdiv (float)    = KL-divergence
-        #   KLdivmax (float) = KL-divergence for a perfect model (dirac delta fxn)
+        '''Calculate normalized Kullback-Leibler divergence
+        normKLdiv uses data and calculates the normKLdiv relative to a random model (Q) over bin range (-b,b)
+        Returns:
+            NKLdiv (float)   = normalized Kullback-Leibler divergence
+            KLdiv (float)    = KL-divergence
+            KLdivmax (float) = KL-divergence for a perfect model (dirac delta fxn)'''
 
         (P,x) = self.pdist(data,b)
         Pmax = np.zeros(len(x))
@@ -196,12 +218,12 @@ class statistics(object):
         return (NKLdiv,KLdiv,KLdivmax)
 
     def pdist(self,data,b,nbins=100,make_outliers_rand=True):
-        # Calculate the discrete probability distribution function of a set of data
-        # Defined over the range (-b,b) with nbins
-        # ignore_outliers (bool) = if True ignore outliers, if False add random error to pdf
-        # Returns:
-        #   pdf (array) = discrete pdf with probability of event i as pdf[i]
-        #   x (array) = midpoints of the bins of the histogram that defines pdf
+        '''Calculate the discrete probability distribution function of a set of data
+        Defined over the range (-b,b) with nbins
+        ignore_outliers (bool) = if True ignore outliers, if False add random error to pdf
+        Returns:
+            pdf (array) = discrete pdf with probability of event i as pdf[i]
+            x (array) = midpoints of the bins of the histogram that defines pdf'''
 
         # remove outliers outside of range (-b,b)
         data2 = data[~(np.abs(data) > b)]
@@ -223,26 +245,27 @@ class statistics(object):
         return (pdf,x)
 
     def entropy(self,pk,qk=None,base=None):
-        # Calculate the entropy of a distribution for given probability values
-        # pk (array) = probability distribution of a discrete distribution
-        # qk (array) = pdf of a second sequence with which pk is compared against
-        # base (float) = the logarithmic base to use (default=e)
-        # Returns:
-        #   S (float) = Shannon entropy if qk is None else Kullback-Leibler divergence
+        '''Calculate the entropy of a distribution for given probability values
+        Inputs:
+            pk (array)   = probability distribution of a discrete distribution
+            qk (array)   = pdf of a second sequence with which pk is compared against
+            base (float) = the logarithmic base to use (default=e)
+        Returns:
+            S (float) = Shannon entropy if qk is None else Kullback-Leibler divergence'''
         return stats.entropy(pk,qk,base)
 
     def model_capacity(self,Hseq,mu,sigma,error):
-        # Calculate model capacity (MC)
-        # Inputs:
-        #   Hseq (float)       = total Shannon sequence entropy for the genetic system
-        #   mu, sigma (arrays) = mean and standard deviations of system outcomes with mu[i] and sigma[i] as the mean and std of outcome i
-        #   error (array)      = model error for system outcomes (of equal length of mu & sigma)
-        # Returns:
-        #   MC (float)      = model capacity in bits
-        #   Hmodel (float)  = Shannon entropy of the model error distribution
-        #   Hrandom (float) = Shannon entropy of a random model error distribution
-        #   N (float)       = number of distinguishable outcomes
-        #   CV (float)      = coefficient of variation of system outcomes
+        '''Calculate model capacity (MC)
+        Inputs:
+            Hseq (float)       = total Shannon sequence entropy for the genetic system
+            mu, sigma (arrays) = mean and standard deviations of system outcomes with mu[i] and sigma[i] as the mean and std of outcome i
+            error (array)      = model error for system outcomes (of equal length of mu & sigma)
+        Returns:
+            MC (float)      = model capacity in bits
+            Hmodel (float)  = Shannon entropy of the model error distribution
+            Hrandom (float) = Shannon entropy of a random model error distribution
+            N (float)       = number of distinguishable outcomes
+            CV (float)      = coefficient of variation of system outcomes'''
 
         # calculate N-distinguishable outcomes
         CV = mean( sigma/mu )
@@ -262,9 +285,14 @@ class statistics(object):
         return (MC,Hmodel,Hrandom,N,CV)
 
 def hseq(self,sequences,align="left",positions=None):
-    # Calcualte total Shannon sequence entropy
-    # Returns:
-    #   hseq 
+    '''Calculate total Shannon sequence entropy
+    Inputs:
+        sequences (list) = sequences in a list
+        align (string)   = "left"/"right"/"positions", "positions" indicates to use positions for alignment
+        positions (list) = list of integers to do alignment (e.g. start codon positions)
+    Returns:
+        hseq (float) = total Shannon sequence entropy summed over all positions
+        S (array)    = Shannon sequence entropy at each position'''
 
     sequences = [seq.upper().replace("U","T") for seq in sequences[:]]
     exp = re.compile('[ATGC]')
@@ -310,7 +338,7 @@ def hseq(self,sequences,align="left",positions=None):
     
     pkList = [[counts[c][i]/maxseqlen for c in alphabet] for i in xrange(maxseqlen)]
 
-    # calcualte Shannon entropy at each position and total Shannon entropy (hseq)
+    # calculate Shannon entropy at each position and total Shannon entropy (hseq)
     S = [self.entropy(pk,base=2) for pk in pkList]
     hseq = sum(S)
 
