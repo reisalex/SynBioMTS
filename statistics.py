@@ -284,62 +284,62 @@ class statistics(object):
 
         return (MC,Hmodel,Hrandom,N,CV)
 
-def hseq(self,sequences,align="left",positions=None):
-    '''Calculate total Shannon sequence entropy
-    Inputs:
-        sequences (list) = sequences in a list
-        align (string)   = "left"/"right"/"positions", "positions" indicates to use positions for alignment
-        positions (list) = list of integers to do alignment (e.g. start codon positions)
-    Returns:
-        hseq (float) = total Shannon sequence entropy summed over all positions
-        S (array)    = Shannon sequence entropy at each position'''
+    def hseq(self,sequences,align="left",positions=None):
+        '''Calculate total Shannon sequence entropy
+        Inputs:
+            sequences (list) = sequences in a list
+            align (string)   = "left"/"right"/"positions", "positions" indicates to use positions for alignment
+            positions (list) = list of integers to do alignment (e.g. start codon positions)
+        Returns:
+            hseq (float) = total Shannon sequence entropy summed over all positions
+            S (array)    = Shannon sequence entropy at each position'''
 
-    sequences = [seq.upper().replace("U","T") for seq in sequences[:]]
-    exp = re.compile('[ATGC]')
-    if any([exp.match(seq) is None for seq in sequences]):
-        raise ValueError("Invalid letters found in sequences. Only ATGCU accepted.")
+        sequences = [seq.upper().replace("U","T") for seq in sequences[:]]
+        exp = re.compile('[ATGC]')
+        if any([exp.match(seq) is None for seq in sequences]):
+            raise ValueError("Invalid letters found in sequences. Only ATGCU accepted.")
 
-    maxseqlen = max([len(seq) for seq in sequence_list])
-    samelen   = all([len(sequences[0])==len(seq) for seq in sequences[1:]])
+        maxseqlen = max([len(seq) for seq in sequence_list])
+        samelen   = all([len(sequences[0])==len(seq) for seq in sequences[1:]])
 
-    if   align == "left" and not samelen:
-        # align sequences to left and buffer right with Xs
-        sequences = [seq+"X"*(maxseqlen-len(seq)) for seq in sequences[:]]
+        if   align == "left" and not samelen:
+            # align sequences to left and buffer right with Xs
+            sequences = [seq+"X"*(maxseqlen-len(seq)) for seq in sequences[:]]
 
-    elif align == "right" and not samelen:
-        # align sequences to the right by buffering left with Xs
-        sequences = ["X"*(maxseqlen-len(seq))+seq for seq in sequences[:]]
+        elif align == "right" and not samelen:
+            # align sequences to the right by buffering left with Xs
+            sequences = ["X"*(maxseqlen-len(seq))+seq for seq in sequences[:]]
 
-    elif align == "positions":
-        # align sequences at alignment_positions and buffer both ends with Xs
+        elif align == "positions":
+            # align sequences at alignment_positions and buffer both ends with Xs
 
-        if positions == None:
-            raise Exception("Provide positions if align=='positions'")
+            if positions == None:
+                raise Exception("Provide positions if align=='positions'")
 
-        lefts     = [len(seq[0:pos]) for seq,pos in zip(sequences,alignment_positions)]
-        rights    = [len(seq[pos:]) for seq,pos in zip(sequences,alignment_positions)]
-        maxleft   = max(lefts)
-        maxright  = max(rights)
-        sequences = ["X"*(maxleft-lenl)+seq+"X"*(maxright-lenr) for lenl,seq,lenr in zip(lefts,sequences[:],rights)]
-    
-    else:
-        ValueError("align cannot be {}. Please use 'left','right',or'positions'".format(align))
+            lefts     = [len(seq[0:pos]) for seq,pos in zip(sequences,alignment_positions)]
+            rights    = [len(seq[pos:]) for seq,pos in zip(sequences,alignment_positions)]
+            maxleft   = max(lefts)
+            maxright  = max(rights)
+            sequences = ["X"*(maxleft-lenl)+seq+"X"*(maxright-lenr) for lenl,seq,lenr in zip(lefts,sequences[:],rights)]
+        
+        else:
+            ValueError("align cannot be {}. Please use 'left','right',or'positions'".format(align))
 
-    assert all(len(sequences[0])==len(seq) for seq in sequences[1:]), "Bug in hseq, sequences aren't the same length."
+        assert all(len(sequences[0])==len(seq) for seq in sequences[1:]), "Bug in hseq, sequences aren't the same length."
 
-    # tabulate frequency of each nt at each position
-    if samelen: alphabet = 'ATCG'
-    else:       alphabet = 'ATCGX'
-    counts = {key: np.zeros(maxseqlen) for key in alphabet}
+        # tabulate frequency of each nt at each position
+        if samelen: alphabet = 'ATCG'
+        else:       alphabet = 'ATCGX'
+        counts = {key: np.zeros(maxseqlen) for key in alphabet}
 
-    for seq in sequences:
-        for i,c in enumerate(seq):
-            counts[c][i] += 1
-    
-    pkList = [[counts[c][i]/maxseqlen for c in alphabet] for i in xrange(maxseqlen)]
+        for seq in sequences:
+            for i,c in enumerate(seq):
+                counts[c][i] += 1
+        
+        pkList = [[counts[c][i]/maxseqlen for c in alphabet] for i in xrange(maxseqlen)]
 
-    # calculate Shannon entropy at each position and total Shannon entropy (hseq)
-    S = [self.entropy(pk,base=2) for pk in pkList]
-    hseq = sum(S)
+        # calculate Shannon entropy at each position and total Shannon entropy (hseq)
+        S = [self.entropy(pk,base=2) for pk in pkList]
+        hseq = sum(S)
 
-    return hseq,S
+        return hseq,S
