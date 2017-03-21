@@ -1,6 +1,5 @@
 """
-
-Custom statistics module for test-sfm.
+Custom statistics module for test-sfm
 
 Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 
@@ -50,7 +49,7 @@ def correlation(x,y,name="Pearson"):
         error = ("The {} correlation is not available."
                  "Please use 'Pearson', 'Spearman', or 'Kendall.'")
         error.format(name)
-        ValueError(error)
+        raise ValueError(error)
 
 def vartest2(x,y,alpha=0.05,test="F"):
     '''Two-sample F-test/Barlett-test/Levene-test for equal variances
@@ -73,7 +72,7 @@ def vartest2(x,y,alpha=0.05,test="F"):
     else:
         error = "The {}-test for equal variances is not available. \
         Please use 'F', 'Barlett', or 'Levene'.".format(test)
-        ValueError(error)
+        raise ValueError(error)
 
     h = pvalue < alpha
     # add confidence interval calculation later
@@ -361,7 +360,7 @@ def sequence_entropy(sequences,align="left",positions=None):
         sequences = ["X"*(maxleft-L)+seq+"X"*(maxright-R) for L,seq,R in zip(lefts,sequences[:],rights)]
     
     else:
-        ValueError("align cannot be {}. Please use 'left','right',or'positions'".format(align))
+        raise ValueError("align cannot be {}. Please use 'left','right',or'positions'".format(align))
 
     # Code test
     assert all(len(sequences[0])==len(seq) for seq in sequences[1:])
