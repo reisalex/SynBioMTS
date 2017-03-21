@@ -1,6 +1,6 @@
 
-
-import statistics as stats
+import numpy as np
+import stats
 
 class Error(Exception):
     """Base class for exceptions in this module."""
