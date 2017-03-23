@@ -9,8 +9,9 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 import stats
 from functools import partial
 
-class Interface():
-    __name__ = "models.interface"
+
+class Models(object):
+    __name__ = "Models"
 
     def __init__(self):
         pass
@@ -64,9 +65,6 @@ class Interface():
         alias (string) = The name of the operator to remove from the interface.
         '''
         delattr(self, alias)
-
-    def calc_stats(self):
-        pass
 
 
 if __name__ == "__main__":
