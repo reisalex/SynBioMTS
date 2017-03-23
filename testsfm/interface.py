@@ -9,8 +9,7 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 import stats
 from functools import partial
 
-
-class Models(object):
+class Models(dict):
     __name__ = "Models"
 
     def __init__(self):
@@ -58,13 +57,41 @@ class Models(object):
             # a class, we do not want to copy the dictionary.
             pmodel.__dict__.update(model.__dict__.copy())
 
+        if not pmodel.args:
+            pmodel.co_varnames = model.__code__.co_varnames
+        else:
+            pmodel.co_varnames = pmodel.args
+
+        # print pmodel.func
+        # print model.__code__.co_varnames
+        print pmodel.co_varnames
+        # print pmodel.args
+        print pmodel.keywords
+
         setattr(self, alias, pmodel)
+        self[alias] = pmodel
 
     def unregister(self, alias):
         '''Unregister *alias* from the model interface.
         alias (string) = The name of the operator to remove from the interface.
         '''
         delattr(self, alias)
+        self.pop(alias)
+
+    def _listed(self):
+        return sorted(self.keys())
+
+    def __add__(self,another):
+        assert another.__name__ == "Models", "Must add two Models to combine."
+        for alias,pmodel in another.iteritems():
+            self.register(alias,pmodel)
+        return self
+
+    def __sub__(self,another):
+        assert another.__name__ == "Models", "Must subtract two Models to remove."
+        for alias,pmodel in another.iteritems():
+            self.unregister(alias,pmodel)
+        return self
 
 
 if __name__ == "__main__":

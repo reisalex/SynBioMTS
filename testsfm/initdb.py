@@ -5,7 +5,6 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 
 """
 
-
 import re
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_NAR_2013'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -39,7 +38,7 @@ def add_dataset(db,datasets):
         
         # Add extended dataset
         paperext = 'EspahBorujeni_NAR_2013_extended'
-        path = 'datasets/{}.xls'.format(paperext)
+        path = '../datasets/{}.xls'.format(paperext)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -48,8 +47,8 @@ def add_dataset(db,datasets):
         ds["PROT.MEAN"] += sheet.col_values(colx=8, start_rowx=3, end_rowx=42)
         ds["PROT.STD"]  += sheet.col_values(colx=9, start_rowx=3, end_rowx=42)
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -61,7 +60,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_NAR_2015'
     
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -81,8 +80,8 @@ def add_dataset(db,datasets):
 
         ds["5'UTR"] = ["{}{}{}".format(pre,aptamer,post) for pre,aptamer,post \
                         in zip(ds["PRE.APTAMER"],ds["APTAMER"],ds["POST.APTAMER"])]
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -94,7 +93,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_JACS_2016'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -110,8 +109,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)        
@@ -123,7 +122,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_Footprint'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -139,8 +138,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -152,7 +151,7 @@ def add_dataset(db,datasets):
     paper = 'Salis_Nat_Biotech_2009'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -186,8 +185,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -199,7 +198,7 @@ def add_dataset(db,datasets):
     paper = 'Farasat_MSB_2014'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -217,8 +216,8 @@ def add_dataset(db,datasets):
         }
 
         ds["5'UTR"] = ["{}{}".format(preseq,RBS) for preseq,RBS in zip(ds['PRESEQ'],ds['RBS'])]
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)        
@@ -230,7 +229,7 @@ def add_dataset(db,datasets):
     paper = 'Tian_NAR_2015'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -246,8 +245,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -259,7 +258,7 @@ def add_dataset(db,datasets):
     paper = 'Mimee_Cell_Sys_2015'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -275,8 +274,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -289,7 +288,7 @@ def add_dataset(db,datasets):
     paper = 'Bonde_NatMethods_IC_2016'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -305,8 +304,8 @@ def add_dataset(db,datasets):
             "PAPER"     : paper
         }
 
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -318,7 +317,7 @@ def add_dataset(db,datasets):
     paper = 'Kosuri_PNAS_2013'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
 
         # import promoter and RBS information
@@ -384,8 +383,8 @@ def add_dataset(db,datasets):
         ds["TSS"] = [promoter_dict[ID]['TSS'] for ID in ds["PROMOTER.ID"]]
         ds["RBS"] = [RBS_dict[ID] for ID in ds['RBS.ID']]
         ds["5'UTR"] = [p[TSS:]+RBS for p,TSS,RBS in zip(ds['PROMOTER'],ds['TSS'],ds['RBS'])]
-        ds["mRNA"] = [UTR+ds["CDS"] for UTR in ds["5'UTR"]]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+ds["CDS"] for UTR in ds["5'UTR"]]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
 
         ds = run_FS_calcs(ds,data)
         df = pd.DataFrame(ds)
@@ -398,7 +397,7 @@ def add_dataset(db,datasets):
     paper = 'Goodman_Science_2013'
 
     if paper in datasets:
-        path = 'datasets/{}.xls'.format(paper)
+        path = '../datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
 
         # import Flow-seq required data to replicate calculations
@@ -409,7 +408,7 @@ def add_dataset(db,datasets):
         data['total.dna.a'] = sheet.cell_value(2,1)
         data['total.dna.b'] = sheet.cell_value(3,1)
 
-        bin_list = ['bin'+str(num) for num in range(1,13)]
+        bin_list = ['BIN'+str(num) for num in range(1,13)]
         data['bin_list'] = bin_list    
 
         sheet = wb.sheet_by_name("bin_vals")
@@ -446,8 +445,8 @@ def add_dataset(db,datasets):
 
         ds["5'UTR"] = [p[TSS:]+RBS+N+"CAT" for p,TSS,RBS,N in \
                                  zip(ds['PROMOTER'],ds['TSS'],ds['RBS'],ds['N.TERMINAL.CDS'])]
-        ds["mRNA"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["START.POS"] = [len(UTR) for UTR in ds["5'UTR"]]        
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]        
 
         ds = run_FS_calcs(ds,data)
         df = pd.DataFrame(ds)
@@ -459,6 +458,7 @@ def add_dataset(db,datasets):
 
 def _make_categories(db):
     # categories save some memory
+
     db["PROTEIN"]  = db["PROTEIN"].astype('category')
     db["ORGANISM"] = db["ORGANISM"].astype('category')
     db["METHOD"]   = db["METHOD"].astype('category')
@@ -467,7 +467,7 @@ def _make_categories(db):
     # And let's define sub-groups of sequences categorized:
     # At the same time, in the same organism, with the same promoter, and same experimental conditions
     info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["PAPER"],db["ORGANISM"],db["PROTEIN"])]
-    db["subgroups"] = pd.Series(info, dtype="category")
+    db["SUBGROUPS"] = pd.Series(info, dtype="category")
     
     # Get list of categories
     # print db["subgroups"].cat.categories
@@ -553,6 +553,6 @@ if __name__ == "__main__":
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
 
-    handle = open('geneticsystems.db','w')
+    handle = open('../geneticsystems.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()

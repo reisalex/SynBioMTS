@@ -1,10 +1,12 @@
 import pandas as pd
 
 
+# class Database(object):
+#     def __init__(self,dbfileName):
+#         pass
 
+def select_datasets(database,datasets):
+    return database[database["PAPER"].isin(datasets)]
 
-# load database
-# self.database = database
-# handle = open(self.database,'r')
-# db = pickle.load(handle)
-# handle.close()
+def remove_datasets(database,datasets):
+    return database[~database["PAPER"].isin(datasets)]
