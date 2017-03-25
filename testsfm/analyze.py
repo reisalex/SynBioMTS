@@ -53,6 +53,8 @@ class ModelTest(object):
         except:
             raise Exception("Database filename: {} is not valid.".format(dbfileName))
 
+        # Add read_Excel pandas code so users can have a database in a spreadsheet
+
         listed = database["PAPER"].cat.categories
         unlisted = [x for x in datasets if x not in listed]
         if unlisted:
@@ -62,41 +64,63 @@ class ModelTest(object):
         assert nprocesses > 0,          "nprocesses should be an int > 0"
         assert isinstance(recalc,bool), "recalc should be boolean"
 
-        self.models = models
-        self.datasets = datasets
-        self.database = database
-        self.partialdb = dbms.select_datasets(database,datasets)
+        self.models     = models
+        self.datasets   = datasets
         self.dbfileName = dbfileName
         self.nprocesses = nprocesses
-        self.recalc = True
+        self.recalc     = recalc        
+        self.database   = database
+        self.partialdb  = dbms.select_datasets(database,datasets)
 
     def run(self):
 
-        # generate iterable
+        entries = ( {k: self.partialdb[k][i] for k in list(self.partialdb)} \
+                for i in xrange(len(self.partialdb)) )
+        bundles = product(self.models._listed(),entries)
+        if self.nprocesses > 1:
+            pool = mp.Pool(processes=self.nprocesses)
+            output = pool.imap(self._wrap,product(self.models._listed(),bundles))
+            # Consider using (chunksize = n)
+            pool.close()
+            pool.join()
+        else:
+            output = [self._wrap(bundle) for bundle in bundles]
 
-        # for model in self.models._listed():
-        # for entry in self.partialdb
-        # print len(self.partialdb)
-        # for i in xrange(len(self.partialdb)):
-
-        # pool.imap
-        # chunksize = 15
-
-        entries = [{k: self.partialdb[k][i] for k in list(self.partialdb)} for i in xrange(len(self.partialdb))]
-        pool = mp.Pool(processes=self.nprocesses)
-        output = pool.imap(self._wrap,product(self.models._listed(),entries))
-
-        # convert model output to pandas dataframe!
-
-        pass
+        # Convert model output to pandas dataframe!
+        # And pickle
 
     def _wrap(self,bundle):
         (name,entry) = bundle
         # the model wrapper will interpret the inputs of the interface.Model
         # and pull those values from the database
 
-        # print self.models[name].__code__.co_varnames
-        # self.models[name]()
+        # USE KEYWORD ARGUMENT UNPACKING TO PASS ONLY NECESSARY ARGS TO
+        # PARTIAL FXN DEFINED AS A PART OF MODELS
+        # >>> kw = {'a': True}
+        # >>> f(**kw)
+        # <<< 'a was True'
+
+        # entry = {'ORGANISM': "Escherichia coli", 'SEQUENCE': "ACTCGATCTTAGCTACGTATCTCGA", ...}
+
+        #('ACTGTAC',) # args
+        #{'organism': 'E. coli', 'temp': 37.0} # keywords
+        #['sequence', 'organism', 'temp', 'startpos'] # variables
+
+        # Remove args and keywords from variables list
+        vrs = self.models[name].variables[len(self.models[name].args):]
+        vrs = [k for k in vrs[:] if k not in self.models[name].keywords.keys()]
+
+        # Get values for those vars in entry (ignorecase)
+        # NEED TO MAKE DBMS CODE THAT ENSURES LABELS IN PANDAS DATAFRAME ARE CAPS! ACR
+        kargs = {k:entry[k.upper()] for k in vrs}
+        print kargs
+        # Run model
+        self.models[name](**kargs)
+
+        # print self.models[name].func
+        # print self.models[name].args
+        # print self.models[name].keywords
+        # print self.models[name].variables
         return 1
 
     def add_datasets(self,datasets):

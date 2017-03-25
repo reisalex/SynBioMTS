@@ -50,24 +50,14 @@ class Models(dict):
         pmodel = partial(model, *args, **kargs)
         pmodel.__name__ = alias
         pmodel.__doc__ = model.__doc__
+        pmodel.variables = list(model.__code__.co_varnames)
 
         if hasattr(model, "__dict__") and not isinstance(model, type):
             # Some functions don't have a dictionary, in these cases
             # simply don't copy it. Moreover, if the model is actually
             # a class, we do not want to copy the dictionary.
             pmodel.__dict__.update(model.__dict__.copy())
-
-        if not pmodel.args:
-            pmodel.co_varnames = model.__code__.co_varnames
-        else:
-            pmodel.co_varnames = pmodel.args
-
-        # print pmodel.func
-        # print model.__code__.co_varnames
-        print pmodel.co_varnames
-        # print pmodel.args
-        print pmodel.keywords
-
+        
         setattr(self, alias, pmodel)
         self[alias] = pmodel
 
