@@ -1,0 +1,5 @@
+# define .p files as pickled Python files
+*.p linguist-language=Python
+
+# but ignore these files anyway since they are so large
+*.p linguist-vendored=false
