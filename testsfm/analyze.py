@@ -30,7 +30,7 @@ class ModelTest(object):
     ModelTest is the core of testsfm
     '''
     
-    def __init__(self,models,datasets,dbfileName,nprocesses=mp.cpu_count(),recalc=False):
+    def __init__(self,models,datasets,dbfileName,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
         datasets (list)               = list of datasets to study
@@ -68,7 +68,8 @@ class ModelTest(object):
         self.datasets   = datasets
         self.dbfileName = dbfileName
         self.nprocesses = nprocesses
-        self.recalc     = recalc        
+        self.recalc     = recalc
+        self.verbose    = verbose
         self.database   = database
         self.partialdb  = dbms.select_datasets(database,datasets)
 
@@ -112,9 +113,24 @@ class ModelTest(object):
 
         # Get values for those vars in entry (ignorecase)
         # NEED TO MAKE DBMS CODE THAT ENSURES LABELS IN PANDAS DATAFRAME ARE CAPS! ACR
+
+        # Need to add Exception handling when needed information isn't available
+        '''
+        Traceback (most recent call last):
+        File "all_models_856IC.py", line 229, in <module>
+        customtest.run()
+        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 87, in run
+        output = [self._wrap(bundle) for bundle in bundles]
+        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 115, in _wrap
         kargs = {k:entry[k.upper()] for k in vrs}
-        print kargs
+        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 115, in <dictcomp>
+        kargs = {k:entry[k.upper()] for k in vrs}
+        KeyError: 'SD'
+        '''
+        kargs = {k: entry[k.upper()] for k in vrs}
+        
         # Run model
+        if self.verbose: print name,entry['SEQUENCE'][:25]
         self.models[name](**kargs)
 
         # print self.models[name].func

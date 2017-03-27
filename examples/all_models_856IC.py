@@ -1,18 +1,63 @@
 
 import testsfm
+import cPickle as pickle
+
+# We're going to use shelve to store model predictions
+# as a dictionary-like persistance object of pandas dataframes
+import shelve
+
+# Import RBS Calculator
+import sys
+sys.path.append('/home/alex/test-sfm/models')
+sys.path.append('/home/alex/Private-Code')
+from DNAc import *
+
+handle = open('/home/alex/Private-Code/rRNA_3p_ends.pickle','r')
+rRNA_16S_3p_ends = pickle.load(handle)
+handle.close()
+
+# Required function in RBS Calculators and UTR Designer
+def get_rRNA(organism):
+    return rRNA_16S_3p_ends[organism][0][0]
+
+def find_best_start(mRNA, start_pos, predictions):
+    '''Finds the number of start codons, the most highly translated start codon and the start range associated with it.
+        Disallows start codons that have stop codons following them.'''
+    
+    stop_codons = ["TAA", "TAG", "TGA", "UAA", "UAG", "UGA"]
+    num_start_codons = 0
+    dG_tot_list = []
+    dG_best = None
+    
+    for index in range(len(predictions.RBS_list)):
+    
+        RBS = predictions.RBS_list[index]
+        in_frame = (start_pos - RBS.start_position) % 3
+        stop_codon_present = any([ (mRNA[pos:pos+3] in stop_codons) for pos in range(RBS.start_position+3, start_pos, 3)]) # stop codon present?
+
+        if (in_frame == 0) and (not stop_codon_present): # if start is in frame and no downstream stop codon
+            num_start_codons += 1
+            dG_tot_list.append(RBS.dG_total)
+
+        if (dG_best == None or RBS.dG_total < dG_best) and (in_frame == 0) and (not stop_codon_present):
+            best_start_index = index
+            dG_best = RBS.dG_total
+            best_start_pos = RBS.start_position
+    
+    RBS = predictions.RBS_list[best_start_index]
+    return (RBS,best_start_pos)
 
 
 # Load and wrap models
-transl_rate_models = testsfm.interface.Models()
-
 import RBS_Calculator_v1_0
 def RBSCalc_v1(sequence,startpos,organism,temp):
     start_range = [0,startpos+1]
+    rRNA = get_rRNA(organism)
     model = RBS_Calculator_v1_0.RBS_Calculator(sequence,start_range,rRNA)
     model.temp = temp
     model.run()
     output = model.output()
-    (RBS,best_start_pos) = find_best_start(sequence,start_pos,output)
+    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
     
     results = {
     'TIR' : RBS.tir,
@@ -24,7 +69,7 @@ def RBSCalc_v1(sequence,startpos,organism,temp):
     'dG_spacing' : RBS.dG_spacing,
     'used_mRNA_sequence' : RBS.sequence,
     'warnings' : RBS.warnings,
-    '5pUTR' : sequence[:,best_start_pos],
+    '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
     'RBSobj': RBS
     }
@@ -34,11 +79,12 @@ def RBSCalc_v1(sequence,startpos,organism,temp):
 import RBS_Calculator_v1_1
 def RBSCalc_v1_1(sequence,startpos,organism,temp):
     start_range = [0,startpos+1]
+    rRNA = get_rRNA(organism)
     model = RBS_Calculator_v1_1.RBS_Calculator(sequence,start_range,rRNA)
     model.temp = temp
     model.run()
     output = model.output()
-    (RBS,best_start_pos) = find_best_start(sequence,start_pos,output)
+    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
 
     results = {
     'TIR' : RBS.tir,
@@ -50,7 +96,7 @@ def RBSCalc_v1_1(sequence,startpos,organism,temp):
     'dG_spacing' : RBS.dG_spacing,
     'used_mRNA_sequence' : RBS.sequence,
     'warnings' : RBS.warnings,
-    '5pUTR' : sequence[:,best_start_pos],
+    '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
     'RBSobj': RBS
     }
@@ -60,11 +106,12 @@ def RBSCalc_v1_1(sequence,startpos,organism,temp):
 import RBS_Calculator_v2_0
 def RBSCalc_v2(sequence,organism,temp,startpos):
     start_range = [0,startpos+1]
+    rRNA = get_rRNA(organism)
     model = RBS_Calculator_v2_0.RBS_Calculator(sequence,start_range,rRNA)
     model.temp = temp
     model.run()
     output = model.output()
-    (RBS,best_start_pos) = find_best_start(sequence,start_pos,output)
+    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
     
     results_dict = {
     'TIR' : RBS.tir,
@@ -85,9 +132,6 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     'dG_distortion' : RBS.optimum_distortion_energy,
     'dG_sliding' : RBS.optimum_sliding_energy,
     'dG_unfolding' : RBS.optimum_unfolding_energy,
-    'warnings' : RBS.warnings,
-    
-    'blank' : "  ",
     'dot_bracket_structure' : RBS.bracket_string_mRNA,
     '5pNterminus_ssRNA' : RBS.ssRNA,
     'len_ssRNA' : RBS.ssRNA_len,
@@ -99,40 +143,8 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     'aligned_most_5p_paired_SD_mRNA' : RBS.aligned_most_5p_SD_border_mRNA,
     'aligned_most_3p_paired_SD_mRNA' : RBS.aligned_most_3p_SD_border_mRNA,
     'dG_mRNA_post_footprint' : RBS.dG_mRNA_post_footprint,
-    'dG_footprint_subtracted' : RBS.dG_footprint_subtracted,                
-    
-    'num_standby_site_hairpins' : RBS.num_standby_site_hairpins,
-    'standby_site_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.standby_site_hairpins]).translate(None, "[]'u"),
-    'standby_site_hairpin_num_bp' : str([bp for seq,bp,length,dG in RBS.standby_site_hairpins]).translate(None, "[]'u"),
-    'standby_site_hairpin_seq_len' : str([length for seq,bp,length,dG in RBS.standby_site_hairpins]).translate(None, "[]'u"),
-    'dG_standby_site_hairpin' : str([dG for seq,bp,length,dG in RBS.standby_site_hairpins]).translate(None, "[]'u"),
-    
-    'SD_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.SD_hairpins]).translate(None, "[]'u"),
-    'SD_hairpin_num_bp' : [bp for seq,bp,length,dG in RBS.SD_hairpins][0],
-    'SD_hairpin_seq_len' : [length for seq,bp,length,dG in RBS.SD_hairpins][0],
-    'dG_SD_hairpin' : [dG for seq,bp,length,dG in RBS.SD_hairpins][0],
-    
-    'SD_start_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.SD_start_hairpins]).translate(None, "[]'u"),
-    'SD_start_hairpin_num_bp' : [bp for seq,bp,length,dG in RBS.SD_start_hairpins][0],
-    'SD_start_hairpin_seq_len' : [length for seq,bp,length,dG in RBS.SD_start_hairpins][0],
-    'dG_SD_start_hairpin' : [dG for seq,bp,length,dG in RBS.SD_start_hairpins][0],
-    
-    'start_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.start_hairpins]).translate(None, "[]'u"),
-    'start_hairpin_num_bp' : [bp for seq,bp,length,dG in RBS.start_hairpins][0],
-    'start_hairpin_seq_len' : [length for seq,bp,length,dG in RBS.start_hairpins][0],
-    'dG_start_hairpin' : [dG for seq,bp,length,dG in RBS.start_hairpins][0],
-    
-    'footprint_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.footprint_hairpins]).translate(None, "[]'u"),
-    'footprint_hairpin_num_bp' : [bp for seq,bp,length,dG in RBS.footprint_hairpins][0],
-    'footprint_hairpin_seq_len' : [length for seq,bp,length,dG in RBS.footprint_hairpins][0],
-    'dG_footprint_hairpin' : [dG for seq,bp,length,dG in RBS.footprint_hairpins][0],
-
-    'post_footprint_hairpin_seqs' : str([seq for seq,bp,length,dG in RBS.post_footprint_hairpins]).translate(None, "[]'u"),
-    'post_footprint_hairpin_num_bp' : [bp for seq,bp,length,dG in RBS.post_footprint_hairpins][0],
-    'post_footprint_hairpin_seq_len' : [length for seq,bp,length,dG in RBS.post_footprint_hairpins][0],
-    'dG_post_footprint_hairpin' : [dG for seq,bp,length,dG in RBS.post_footprint_hairpins][0],
-
-    '5pUTR' : sequence[:,best_start_pos],
+    'dG_footprint_subtracted' : RBS.dG_footprint_subtracted,
+    '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
     'RBSobj': RBS
     }
@@ -140,61 +152,72 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     return results
 
 import UTR_Designer
+def wrap_UTR_Designer(sequence,startpos,organism,temp):
+    start_range = [0,startpos+1]
+    rRNA = get_rRNA(organism)
+    model = UTR_Designer.RBS_Calculator(sequence,start_range,rRNA)
+    model.temp = temp
+    model.run()
+    output = model.output()
+    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
+    
+    results = {
+    'TIR' : RBS.tir,
+    'dG_total' : RBS.dG_total,
+    'dG_mRNA_rRNA' : RBS.dG_mRNA_rRNA,
+    'dG_mRNA' : RBS.dG_mRNA,
+    'dG_start' : RBS.dG_start,
+    'dG_standby' : RBS.dG_standby,
+    'dG_spacing' : RBS.dG_spacing,
+    'used_mRNA_sequence' : RBS.sequence,
+    'warnings' : RBS.warnings,
+    '5pUTR' : sequence[:best_start_pos],
+    'CDS' : sequence[best_start_pos:],
+    'RBSobj': RBS
+    }
 
-handle = open('models/RBSDesigner_ALL.p','r')
+    return results
+
+handle = open('../models/RBSDesigner_ALL.p','r')
+RBS_Designer = pickle.load(handle)
+handle.close()
+def wrap_RBS_Designer(sequence):
+    # RBS['translation efficiency']
+    # RBS['Expression']
+    # RBS['exposure probability']
+    # RBS['mRNA-ribosome probability']
+    # RBS['SD']
+    # RBS['dG_SD:aSD']
+    # RBS['spacer length']
+    return RBS_Designer[sequence]
 
 from emopec._emopec import predict_spacing, get_expression
+def EMOPEC(sequence,startpos):
+    RBS = predict_spacing(sequence[:startpos])
+    preseq,SD,spacer,Expression = RBS
+    maxExpression = get_expression(sd_seq='AGGAGA',sd_dist=len(spacer))
+    minExpression = get_expression(sd_seq='TTGGGC',sd_dist=len(spacer))
+    Expression_percent = (Expression - minExpression)/(maxExpression - minExpression)
 
+    results = {
+    'preseq' : preseq,
+    'SD_seq' : SD,
+    'spacer_seq' : spacer,
+    'spacer_length' : len(spacer),
+    'Expression' : Expression,
+    'Expression_percent': Expression_percent,
+    }
 
-        
-    elif model == "EMOPEC":
-    
-        preseq,SD,spacer,Expression = RBS
-        
-        
-        maxExpression = get_expression(sd_seq='AGGAGA',sd_dist=len(spacer))
-        minExpression = get_expression(sd_seq='TTGGGC',sd_dist=len(spacer))
-        
-        Expression_percent = (Expression - minExpression)/(maxExpression - minExpression)
-        
-        results_dict = {
-        'preseq' : preseq,
-        'SD_seq' : SD,
-        'spacer_seq' : spacer,
-        'spacer_length' : len(spacer),
-        'Expression' : Expression,
-        'Expression_percent': Expression_percent,
-        }
-    
-    elif model == "RBS Designer":
-        pass
-        #RBS['translation efficiency']
-        #RBS['Expression']
-        #RBS['exposure probability']
-        #RBS['mRNA-ribosome probability']
-        #RBS['SD']
-        #RBS['dG_SD:aSD']
-        #RBS['spacer length']
-    
-    #=== All models ===#
-    
-    results_dict['fivepUTR'] = mRNA[:start_pos]
-    results_dict['CDS'] = mRNA[start_pos:]
+    return results
 
-    return results_dict
-
-
-
-
+# register models with the interface.Models object
+transl_rate_models = testsfm.interface.Models()
 transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
 transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
 transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
-
-
-
-
-
-
+transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
+transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
+transl_rate_models.register("EMOPEC",EMOPEC)
 
 # Define datasets to run model calculations on
 # In this case, we're goign to specify the 856IC datasets
@@ -212,5 +235,6 @@ datasets = ['EspahBorujeni_NAR_2013',
 # Provide the pickled database file name
 fileName = '../geneticsystems.db'
 
-customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,fileName)
+customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,fileName,nprocesses=1,verbose=True)
 customtest.run()
+

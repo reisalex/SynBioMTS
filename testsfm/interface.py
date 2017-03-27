@@ -7,6 +7,7 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 """
 
 import stats
+import inspect
 from functools import partial
 
 class Models(dict):
@@ -50,14 +51,15 @@ class Models(dict):
         pmodel = partial(model, *args, **kargs)
         pmodel.__name__ = alias
         pmodel.__doc__ = model.__doc__
-        pmodel.variables = list(model.__code__.co_varnames)
+        ArgSpec = inspect.getargspec(model)
+        pmodel.variables = ArgSpec[0]
 
         if hasattr(model, "__dict__") and not isinstance(model, type):
             # Some functions don't have a dictionary, in these cases
             # simply don't copy it. Moreover, if the model is actually
             # a class, we do not want to copy the dictionary.
             pmodel.__dict__.update(model.__dict__.copy())
-        
+
         setattr(self, alias, pmodel)
         self[alias] = pmodel
 
