@@ -12,13 +12,13 @@ sys.path.append('/home/alex/test-sfm/models')
 sys.path.append('/home/alex/Private-Code')
 from DNAc import *
 
-handle = open('/home/alex/Private-Code/rRNA_3p_ends.pickle','r')
+handle = open('/home/alex/test-sfm/models/rRNA_16S_3p_ends.p','r')
 rRNA_16S_3p_ends = pickle.load(handle)
 handle.close()
 
 # Required function in RBS Calculators and UTR Designer
 def get_rRNA(organism):
-    return rRNA_16S_3p_ends[organism][0][0]
+    return rRNA_16S_3p_ends[organism]
 
 def find_best_start(mRNA, start_pos, predictions):
     '''Finds the number of start codons, the most highly translated start codon and the start range associated with it.
@@ -70,8 +70,7 @@ def RBSCalc_v1(sequence,startpos,organism,temp):
     'used_mRNA_sequence' : RBS.sequence,
     'warnings' : RBS.warnings,
     '5pUTR' : sequence[:best_start_pos],
-    'CDS' : sequence[best_start_pos:],
-    'RBSobj': RBS
+    'CDS' : sequence[best_start_pos:]
     }
 
     return results
@@ -97,8 +96,7 @@ def RBSCalc_v1_1(sequence,startpos,organism,temp):
     'used_mRNA_sequence' : RBS.sequence,
     'warnings' : RBS.warnings,
     '5pUTR' : sequence[:best_start_pos],
-    'CDS' : sequence[best_start_pos:],
-    'RBSobj': RBS
+    'CDS' : sequence[best_start_pos:]
     }
 
     return results
@@ -146,7 +144,6 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     'dG_footprint_subtracted' : RBS.dG_footprint_subtracted,
     '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
-    'RBSobj': RBS
     }
 
     return results
@@ -173,7 +170,6 @@ def wrap_UTR_Designer(sequence,startpos,organism,temp):
     'warnings' : RBS.warnings,
     '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
-    'RBSobj': RBS
     }
 
     return results
@@ -205,36 +201,37 @@ def EMOPEC(sequence,startpos):
     'spacer_seq' : spacer,
     'spacer_length' : len(spacer),
     'Expression' : Expression,
-    'Expression_percent': Expression_percent,
+    'Expression_percent': Expression_percent
     }
 
     return results
 
-# register models with the interface.Models object
-transl_rate_models = testsfm.interface.Models()
-transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
-transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
-transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
-transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
-transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
-transl_rate_models.register("EMOPEC",EMOPEC)
+if __name__ == "__main__":
 
-# Define datasets to run model calculations on
-# In this case, we're goign to specify the 856IC datasets
-datasets = ['EspahBorujeni_NAR_2013',
-            'EspahBorujeni_NAR_2015',
-            'EspahBorujeni_JACS_2016',
-            'EspahBorujeni_Footprint',
-            'Salis_Nat_Biotech_2009',
-            'Farasat_MSB_2014',
-            'Tian_NAR_2015',
-            'Mimee_Cell_Sys_2015',
-            'Bonde_NatMethods_IC_2016'
-            ]
+    # register models with the interface.Models object
+    transl_rate_models = testsfm.interface.Models()
+    # transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
+    # transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
+    # transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
+    # transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
+    # transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
+    transl_rate_models.register("EMOPEC",EMOPEC)
 
-# Provide the pickled database file name
-fileName = '../geneticsystems.db'
+    # Define datasets to run model calculations on
+    # In this case, we're goign to specify the 856IC datasets
+    datasets = ['EspahBorujeni_NAR_2013',
+                'EspahBorujeni_NAR_2015',
+                'EspahBorujeni_JACS_2016',
+                'EspahBorujeni_Footprint',
+                'Salis_Nat_Biotech_2009',
+                'Farasat_MSB_2014',
+                'Tian_NAR_2015',
+                'Mimee_Cell_Sys_2015',
+                'Bonde_NatMethods_IC_2016'
+                ]
 
-customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,fileName,nprocesses=1,verbose=True)
-customtest.run()
+    # Provide the pickled database file name
+    dbfileName = '../geneticsystems.db'
 
+    customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfileName,nprocesses=1,verbose=True)
+    # customtest.run()

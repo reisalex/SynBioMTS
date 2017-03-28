@@ -29,7 +29,7 @@ class ModelTest(object):
     '''
     ModelTest is the core of testsfm
     '''
-    
+
     def __init__(self,models,datasets,dbfileName,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
@@ -55,7 +55,7 @@ class ModelTest(object):
 
         # Add read_Excel pandas code so users can have a database in a spreadsheet
 
-        listed = database["PAPER"].cat.categories
+        listed = database["DATASET"].cat.categories
         unlisted = [x for x in datasets if x not in listed]
         if unlisted:
             error = "These datasets are unlisted: " + ", ".join(unlisted)
@@ -73,14 +73,14 @@ class ModelTest(object):
         self.database   = database
         self.partialdb  = dbms.select_datasets(database,datasets)
 
-    def run(self):
+    def run(self,fileName=None):
 
         entries = ( {k: self.partialdb[k][i] for k in list(self.partialdb)} \
                 for i in xrange(len(self.partialdb)) )
-        bundles = product(self.models._listed(),entries)
+        bundles = product(self.models.provided,entries)
         if self.nprocesses > 1:
             pool = mp.Pool(processes=self.nprocesses)
-            output = pool.imap(self._wrap,product(self.models._listed(),bundles))
+            output = pool.imap(self._wrap,product(self.models.provided,bundles))
             # Consider using (chunksize = n)
             pool.close()
             pool.join()
@@ -89,20 +89,28 @@ class ModelTest(object):
 
         # Convert model output to pandas dataframe!
         # And pickle
+        chunksize = len(output)/len(self.models)
+        output_by_model = [output[x:x+chunksize] for x in xrange(0,len(output),chunksize)]
+
+        for i in xrange(len()):
+            name = self.models.provided[i]
+            self.results[name] = pd.DataFrame(output_by_model[i])
+            self.results[name]['ID'] = self.partialdb['ID'] # ADD IDs
+            
+        # write to shelve
+        if fileName is not None:
+            d = shelve.open(fileName)
+            d.update(self.results)
+            d.close()
 
     def _wrap(self,bundle):
-        (name,entry) = bundle
         # the model wrapper will interpret the inputs of the interface.Model
         # and pull those values from the database
 
-        # USE KEYWORD ARGUMENT UNPACKING TO PASS ONLY NECESSARY ARGS TO
-        # PARTIAL FXN DEFINED AS A PART OF MODELS
-        # >>> kw = {'a': True}
-        # >>> f(**kw)
-        # <<< 'a was True'
+        (name,entry) = bundle
+        # entry = {'ORGANISM':"Escherichia coli",'SEQUENCE':"ACTCGATCTT",...}
 
-        # entry = {'ORGANISM': "Escherichia coli", 'SEQUENCE': "ACTCGATCTTAGCTACGTATCTCGA", ...}
-
+        # dev notes
         #('ACTGTAC',) # args
         #{'organism': 'E. coli', 'temp': 37.0} # keywords
         #['sequence', 'organism', 'temp', 'startpos'] # variables
@@ -111,33 +119,25 @@ class ModelTest(object):
         vrs = self.models[name].variables[len(self.models[name].args):]
         vrs = [k for k in vrs[:] if k not in self.models[name].keywords.keys()]
 
-        # Get values for those vars in entry (ignorecase)
-        # NEED TO MAKE DBMS CODE THAT ENSURES LABELS IN PANDAS DATAFRAME ARE CAPS! ACR
+        # Exception handling when data is not available
+        if any(k.upper() not in entry.keys() for k in vrs):
+            err = "One of {}'s arguments is not in the database.".format(name)
+            print "Model requested arguments: " + str(vrs)
+            print "Database provided values: " + str(entry.keys())
+            raise KeyError(err)
+        else:
+            kargs = {k: entry[k.upper()] for k in vrs}
 
-        # Need to add Exception handling when needed information isn't available
-        '''
-        Traceback (most recent call last):
-        File "all_models_856IC.py", line 229, in <module>
-        customtest.run()
-        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 87, in run
-        output = [self._wrap(bundle) for bundle in bundles]
-        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 115, in _wrap
-        kargs = {k:entry[k.upper()] for k in vrs}
-        File "/usr/local/lib/python2.7/dist-packages/testsfm-1.0-py2.7.egg/testsfm/analyze.py", line 115, in <dictcomp>
-        kargs = {k:entry[k.upper()] for k in vrs}
-        KeyError: 'SD'
-        '''
-        kargs = {k: entry[k.upper()] for k in vrs}
-        
+        # Print if verbose
+        if self.verbose:
+            fmt = "model={m:s}, ID={ID:s}, seq={seq:s}"
+            print fmt.format(m=name,ID=entry['ID'],seq=entry['SEQUENCE'][:50])
+
         # Run model
-        if self.verbose: print name,entry['SEQUENCE'][:25]
-        self.models[name](**kargs)
+        # Using keyword argument unpacking to pass only requested args
+        output = self.models[name](**kargs)
 
-        # print self.models[name].func
-        # print self.models[name].args
-        # print self.models[name].keywords
-        # print self.models[name].variables
-        return 1
+        return output
 
     def add_datasets(self,datasets):
         self.datasets = list(set(self.datasets+datasets))

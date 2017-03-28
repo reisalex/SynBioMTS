@@ -62,6 +62,7 @@ class Models(dict):
 
         setattr(self, alias, pmodel)
         self[alias] = pmodel
+        self.provided = sorted(self.keys())
 
     def unregister(self, alias):
         '''Unregister *alias* from the model interface.
@@ -69,9 +70,7 @@ class Models(dict):
         '''
         delattr(self, alias)
         self.pop(alias)
-
-    def _listed(self):
-        return sorted(self.keys())
+        self.provided = sorted(self.keys())
 
     def __add__(self,another):
         assert another.__name__ == "Models", "Must add two Models to combine."

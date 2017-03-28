@@ -6,7 +6,7 @@ import pandas as pd
 #         pass
 
 def select_datasets(database,datasets):
-    return database[database["PAPER"].isin(datasets)]
+    return database[database["DATASET"].isin(datasets)]
 
 def remove_datasets(database,datasets):
-    return database[~database["PAPER"].isin(datasets)]
+    return database[~database["DATASET"].isin(datasets)]

@@ -33,7 +33,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
         
         # Add extended dataset
@@ -75,7 +75,7 @@ def add_dataset(db,datasets):
             "ORGANISM"      : "Escherichia coli str. K-12 substr. DH10B",
             "METHOD"        : "Individually Characterized",
             "TEMP"          : 37.0,
-            "PAPER"         : paper
+            "DATASET"       : paper
         }
 
         ds["5'UTR"] = ["{}{}{}".format(pre,aptamer,post) for pre,aptamer,post \
@@ -106,7 +106,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -135,7 +135,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -182,7 +182,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Escherichia coli str. K-12 substr. DH10B",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -212,7 +212,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : sheet.col_values(colx=2, start_rowx=1, end_rowx=146),
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["5'UTR"] = ["{}{}".format(preseq,RBS) for preseq,RBS in zip(ds['PRESEQ'],ds['RBS'])]
@@ -242,7 +242,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : sheet.col_values(colx=2, start_rowx=2, end_rowx=26),
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -271,7 +271,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Bacteroides thetaiotaomicron VPI-5482",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -301,7 +301,7 @@ def add_dataset(db,datasets):
             "ORGANISM"  : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"    : "Individually Characterized",
             "TEMP"      : 37.0,
-            "PAPER"     : paper
+            "DATASET"   : paper
         }
 
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
@@ -372,7 +372,7 @@ def add_dataset(db,datasets):
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
-            "PAPER"         : paper
+            "DATASET"       : paper
         }
 
         # get contig counts from Flow-seq
@@ -436,7 +436,7 @@ def add_dataset(db,datasets):
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
-            "PAPER"         : paper
+            "DATASET"       : paper
         }
 
         # get contig counts from Flow-seq
@@ -452,7 +452,13 @@ def add_dataset(db,datasets):
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
 
+    # Clean up, define categories based on organism/host/dataset
     db = _make_categories(db)
+
+    # Add seq IDs
+    nseqs = int(len(db))
+    padlen = int(np.ceil(np.log10(nseqs)))
+    db['ID'] = ['seq'+str(n).zfill(padlen) for n in xrange(1,nseqs+1)]
 
     return db
 
@@ -462,11 +468,11 @@ def _make_categories(db):
     db["PROTEIN"]  = db["PROTEIN"].astype('category')
     db["ORGANISM"] = db["ORGANISM"].astype('category')
     db["METHOD"]   = db["METHOD"].astype('category')
-    db["PAPER"]    = db["PAPER"].astype('category')
+    db["DATASET"]  = db["DATASET"].astype('category')
 
     # And let's define sub-groups of sequences categorized:
     # At the same time, in the same organism, with the same promoter, and same experimental conditions
-    info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["PAPER"],db["ORGANISM"],db["PROTEIN"])]
+    info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["DATASET"],db["ORGANISM"],db["PROTEIN"])]
     db["SUBGROUPS"] = pd.Series(info, dtype="category")
     
     # Get list of categories
