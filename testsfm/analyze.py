@@ -12,7 +12,7 @@ from itertools import product
 import multiprocessing as mp
 import scipy
 import pandas
-
+import shelve
 import dbms
 
 # Using copy_reg to allow the pickle module to instance methods
@@ -30,11 +30,11 @@ class ModelTest(object):
     ModelTest is the core of testsfm
     '''
 
-    def __init__(self,models,datasets,dbfileName,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
+    def __init__(self,models,datasets,dbfilename,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
         datasets (list)               = list of datasets to study
-        dbfileName (string)           = filename of the geneticsystems database
+        dbfilename (string)           = filename of the geneticsystems database
         nprocesses (int)              = number of processes to use with
                                         multiprocessing if 1, ModelTest
                                         does not use multiprocessing
@@ -46,12 +46,12 @@ class ModelTest(object):
             raise Exception("Not an interface.Models object: {}.".format(models))
 
         try:
-            handle = open(dbfileName,'r')
+            handle = open(dbfilename,'r')
             database = pickle.load(handle)
             handle.close()
             assert str(type(database)) == "<class 'pandas.core.frame.DataFrame'>"
         except:
-            raise Exception("Database filename: {} is not valid.".format(dbfileName))
+            raise Exception("Database filename: {} is not valid.".format(dbfilename))
 
         # Add read_Excel pandas code so users can have a database in a spreadsheet
 
@@ -66,21 +66,22 @@ class ModelTest(object):
 
         self.models     = models
         self.datasets   = datasets
-        self.dbfileName = dbfileName
+        self.dbfilename = dbfilename
         self.nprocesses = nprocesses
         self.recalc     = recalc
         self.verbose    = verbose
         self.database   = database
         self.partialdb  = dbms.select_datasets(database,datasets)
+        self.results    = {}
 
-    def run(self,fileName=None):
+    def run(self,filename=None):
 
         entries = ( {k: self.partialdb[k][i] for k in list(self.partialdb)} \
                 for i in xrange(len(self.partialdb)) )
-        bundles = product(self.models.provided,entries)
+        bundles = product(self.models.available,entries)
         if self.nprocesses > 1:
             pool = mp.Pool(processes=self.nprocesses)
-            output = pool.imap(self._wrap,product(self.models.provided,bundles))
+            output = pool.map(self._wrap,product(self.models.available,bundles))
             # Consider using (chunksize = n)
             pool.close()
             pool.join()
@@ -92,14 +93,14 @@ class ModelTest(object):
         chunksize = len(output)/len(self.models)
         output_by_model = [output[x:x+chunksize] for x in xrange(0,len(output),chunksize)]
 
-        for i in xrange(len()):
-            name = self.models.provided[i]
-            self.results[name] = pd.DataFrame(output_by_model[i])
+        for i in xrange(len(self.models.available)):
+            name = self.models.available[i]
+            self.results[name] = pandas.DataFrame(output_by_model[i])
             self.results[name]['ID'] = self.partialdb['ID'] # ADD IDs
-            
+
         # write to shelve
-        if fileName is not None:
-            d = shelve.open(fileName)
+        if filename is not None:
+            d = shelve.open(filename)
             d.update(self.results)
             d.close()
 
@@ -123,7 +124,7 @@ class ModelTest(object):
         if any(k.upper() not in entry.keys() for k in vrs):
             err = "One of {}'s arguments is not in the database.".format(name)
             print "Model requested arguments: " + str(vrs)
-            print "Database provided values: " + str(entry.keys())
+            print "Database available values: " + str(entry.keys())
             raise KeyError(err)
         else:
             kargs = {k: entry[k.upper()] for k in vrs}

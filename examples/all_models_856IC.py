@@ -111,7 +111,7 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     output = model.output()
     (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
     
-    results_dict = {
+    results = {
     'TIR' : RBS.tir,
     'dG_total' : RBS.dG_total,
     'dG_mRNA_rRNA' : RBS.dG_mRNA_rRNA,
@@ -129,19 +129,11 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     'surface_area' : RBS.optimum_available_RNA_surface_area,
     'dG_distortion' : RBS.optimum_distortion_energy,
     'dG_sliding' : RBS.optimum_sliding_energy,
-    'dG_unfolding' : RBS.optimum_unfolding_energy,
-    'dot_bracket_structure' : RBS.bracket_string_mRNA,
-    '5pNterminus_ssRNA' : RBS.ssRNA,
-    'len_ssRNA' : RBS.ssRNA_len,
-    'AU_count' : RBS.AU_count,
-    'spacer_sequence' : RBS.spacer_seq,
-    'mRNA_rRNA_hybrid_seq': RBS.mRNA_rRNA_hybrid_seq,
+    'dG_unfolding' : RBS.optimum_unfolding_energy,  
     'most_5p_paired_SD_mRNA' : RBS.most_5p_paired_SD_mRNA,
     'most_3p_paired_SD_mRNA' : RBS.most_3p_paired_SD_mRNA,
     'aligned_most_5p_paired_SD_mRNA' : RBS.aligned_most_5p_SD_border_mRNA,
     'aligned_most_3p_paired_SD_mRNA' : RBS.aligned_most_3p_SD_border_mRNA,
-    'dG_mRNA_post_footprint' : RBS.dG_mRNA_post_footprint,
-    'dG_footprint_subtracted' : RBS.dG_footprint_subtracted,
     '5pUTR' : sequence[:best_start_pos],
     'CDS' : sequence[best_start_pos:],
     }
@@ -178,14 +170,19 @@ handle = open('../models/RBSDesigner_ALL.p','r')
 RBS_Designer = pickle.load(handle)
 handle.close()
 def wrap_RBS_Designer(sequence):
-    # RBS['translation efficiency']
-    # RBS['Expression']
-    # RBS['exposure probability']
-    # RBS['mRNA-ribosome probability']
-    # RBS['SD']
-    # RBS['dG_SD:aSD']
-    # RBS['spacer length']
-    return RBS_Designer[sequence]
+    
+    keys = ['translation efficiency',
+    'Expression',
+    'exposure probability',
+    'mRNA-ribosome probability',
+    'SD',
+    'dG_SD:aSD',
+    'spacer length'
+    ]
+
+    if sequence in RBS_Designer: RBS = RBS_Designer[sequence]
+    else: RBS = {k: None for k in keys}
+    return RBS
 
 from emopec._emopec import predict_spacing, get_expression
 def EMOPEC(sequence,startpos):
@@ -210,11 +207,11 @@ if __name__ == "__main__":
 
     # register models with the interface.Models object
     transl_rate_models = testsfm.interface.Models()
-    # transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
-    # transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
-    # transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
-    # transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
-    # transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
+    transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
+    transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
+    transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
+    transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
+    transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
     transl_rate_models.register("EMOPEC",EMOPEC)
 
     # Define datasets to run model calculations on
@@ -231,7 +228,8 @@ if __name__ == "__main__":
                 ]
 
     # Provide the pickled database file name
-    dbfileName = '../geneticsystems.db'
+    dbfilename = '../geneticsystems.db'
 
-    customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfileName,nprocesses=1,verbose=True)
-    # customtest.run()
+    # customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfilename,nprocesses=1,verbose=True)
+    customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfilename,verbose=True)
+    customtest.run(filename='model_calcs.db')
