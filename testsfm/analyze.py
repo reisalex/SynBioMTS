@@ -30,17 +30,18 @@ class ModelTest(object):
     ModelTest is the core of testsfm
     '''
 
-    def __init__(self,models,datasets,dbfilename,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
+    def __init__(self,models,dbfilename,filters=None,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
-        datasets (list)               = list of datasets to study
         dbfilename (string)           = filename of the geneticsystems database
+        filters (dictionary)          = dictionary to filter dataset using dbms
         nprocesses (int)              = number of processes to use with
                                         multiprocessing if 1, ModelTest
                                         does not use multiprocessing
         recalc (bool)                 = boolean to tell the testsystem
                                         to recalcualte model predictions
-                                        on existing datasets'''
+                                        on existing datasets
+        verbose (bool)                = talk to me'''
 
         if models.__name__ != "Models":
             raise Exception("Not an interface.Models object: {}.".format(models))
@@ -63,6 +64,7 @@ class ModelTest(object):
         
         assert nprocesses > 0,          "nprocesses should be an int > 0"
         assert isinstance(recalc,bool), "recalc should be boolean"
+        assert isinstance(filters,dict), "filters should be a dictionary"
 
         self.models     = models
         self.datasets   = datasets
@@ -71,32 +73,34 @@ class ModelTest(object):
         self.recalc     = recalc
         self.verbose    = verbose
         self.database   = database
-        self.partialdb  = dbms.select_datasets(database,datasets)
+        self.filters    = filters
         self.results    = {}
 
     def run(self,filename=None):
 
-        entries = ( {k: self.partialdb[k][i] for k in list(self.partialdb)} \
-                for i in xrange(len(self.partialdb)) )
+        # Filter database
+        if self.fitlers:
+            db = self.filter_by_label(self.database,self.filters)
+
+        entries = ( {k: db[k][i] for k in list(db)} for i in xrange(len(db)) )
         bundles = product(self.models.available,entries)
+
         if self.nprocesses > 1:
-            pool = mp.Pool(processes=self.nprocesses)
-            output = pool.map(self._wrap,product(self.models.available,bundles))
-            # Consider using (chunksize = n)
+            pool = mp.Pool(processes=self.nprocesses) # consider chunking
+            output = pool.map(self._wrap,bundles)
             pool.close()
             pool.join()
         else:
             output = [self._wrap(bundle) for bundle in bundles]
 
-        # Convert model output to pandas dataframe!
-        # And pickle
+        # Convert model output to pandas dataframe and pickle
         chunksize = len(output)/len(self.models)
         output_by_model = [output[x:x+chunksize] for x in xrange(0,len(output),chunksize)]
 
         for i in xrange(len(self.models.available)):
             name = self.models.available[i]
             self.results[name] = pandas.DataFrame(output_by_model[i])
-            self.results[name]['ID'] = self.partialdb['ID'] # ADD IDs
+            self.results[name]['ID'] = self.db['ID'] # ADD IDs
 
         # write to shelve
         if filename is not None:
@@ -142,12 +146,12 @@ class ModelTest(object):
 
     def add_datasets(self,datasets):
         self.datasets = list(set(self.datasets+datasets))
-        self.partialdb = dbms.select_datasets(self.database,self.datasets)
 
     def remove_datasets(self,datasets):
-        for ds in datasets:
-            self.datasets.remove(ds)
-        self.partialdb = dbms.select_datasets(self.database,self.datasets)
+        self.datasets = [ds for ds in self.datasets[:] if ds not in datasets]
+
+    def add_filters(self,filters):
+        pass
 
     def add_model(self,alias,model):
         pass

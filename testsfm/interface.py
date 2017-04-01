@@ -16,7 +16,7 @@ class Models(dict):
     def __init__(self):
         pass
 
-    def register(self, alias, model, *args, **kargs):
+    def add(self, alias, model, *args, **kargs):
         '''Register a model with the interface under the name *alias*. You
         may provide default arguments that will be passed automatically when
         calling the registered model. Fixed arguments can then be overriden
@@ -64,7 +64,7 @@ class Models(dict):
         self[alias] = pmodel
         self.available = sorted(self.keys())
 
-    def unregister(self, alias):
+    def remove(self, alias):
         '''Unregister *alias* from the model interface.
         alias (string) = The name of the operator to remove from the interface.
         '''

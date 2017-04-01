@@ -205,31 +205,30 @@ def EMOPEC(sequence,startpos):
 
 if __name__ == "__main__":
 
-    # register models with the interface.Models object
+    # add models to interface.Models
     transl_rate_models = testsfm.interface.Models()
-    transl_rate_models.register("RBSCalc_v1",RBSCalc_v1)
-    transl_rate_models.register("RBSCalc_v1_1",RBSCalc_v1_1)
-    transl_rate_models.register("RBSCalc_v2",RBSCalc_v2)
-    transl_rate_models.register("UTRDesigner",wrap_UTR_Designer)
-    transl_rate_models.register("RBSDesigner",wrap_RBS_Designer)
-    transl_rate_models.register("EMOPEC",EMOPEC)
+    transl_rate_models.add("RBSCalc_v1",RBSCalc_v1)
+    transl_rate_models.add("RBSCalc_v1_1",RBSCalc_v1_1)
+    transl_rate_models.add("RBSCalc_v2",RBSCalc_v2)
+    transl_rate_models.add("UTRDesigner",wrap_UTR_Designer)
+    transl_rate_models.add("RBSDesigner",wrap_RBS_Designer)
+    transl_rate_models.add("EMOPEC",EMOPEC)
 
-    # Define datasets to run model calculations on
-    # In this case, we're goign to specify the 856IC datasets
-    datasets = ['EspahBorujeni_NAR_2013',
-                'EspahBorujeni_NAR_2015',
-                'EspahBorujeni_JACS_2016',
-                'EspahBorujeni_Footprint',
-                'Salis_Nat_Biotech_2009',
-                'Farasat_MSB_2014',
-                'Tian_NAR_2015',
-                'Mimee_Cell_Sys_2015',
-                'Bonde_NatMethods_IC_2016'
-                ]
+    # define database filters
+    filters = { "DATASET": ['EspahBorujeni_NAR_2013',
+                            'EspahBorujeni_NAR_2015',
+                            'EspahBorujeni_JACS_2016',
+                            'EspahBorujeni_Footprint',
+                            'Salis_Nat_Biotech_2009',
+                            'Farasat_MSB_2014',
+                            'Tian_NAR_2015',
+                            'Mimee_Cell_Sys_2015',
+                            'Bonde_NatMethods_IC_2016']
+                }
 
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
 
     # customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfilename,nprocesses=1,verbose=True)
-    customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfilename,verbose=True)
+    customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,datasets,verbose=True)
     customtest.run(filename='model_calcs.db')
