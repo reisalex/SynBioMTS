@@ -473,7 +473,7 @@ def _make_categories(db):
     # And let's define sub-groups of sequences categorized:
     # At the same time, in the same organism, with the same promoter, and same experimental conditions
     info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["DATASET"],db["ORGANISM"],db["PROTEIN"])]
-    db["SUBGROUPS"] = pd.Series(info, dtype="category")
+    db["SUBGROUP"] = pd.Series(info, dtype="category")
     
     # Get list of categories
     # print db["subgroups"].cat.categories

@@ -10,6 +10,7 @@ import re
 import numpy as np
 import sklearn
 import scipy
+from scipy.optimize import minimize
 
 def correlation(x,y,name="Pearson"):
     # Linear or rank correlation
@@ -37,18 +38,25 @@ def correlation(x,y,name="Pearson"):
         error.format(name)
         raise ValueError(error)
 
-def vartest2(x,y,alpha=0.05,test="F"):
+def vartest2(x,y,logNormal=False,alpha=0.05,test="F"):
     '''Two-sample F-test/Barlett-test/Levene-test for equal variances
     Returns:
         h (bool)  = True if the test rejects the null hypothesis
         S (float) = the test statistic
         pvalue (float) = the p-value for significance of test decision'''
 
+    if logNormal:
+        varx = np.exp(np.var(np.log(x)))
+        vary = np.exp(np.var(np.log(y)))
+    else:
+        varx = np.var(x)
+        vary = np.var(y)
+
     if test == "F":
         df1 = len(x)-1
         df2 = len(y)-1
-        statistic = np.var(x)/np.var(y) # stat = F
-        pvalue = scipy.stats.f.sf(stat, df1, df2)
+        statistic = varx/vary # stat = F
+        pvalue = scipy.stats.f.sf(statistic, df1, df2)
 
     elif test == "Barlett":
         (statistic,pvalue) = scipy.stats.bartlett(x,y)
@@ -90,7 +98,7 @@ def fit_linear_model(x,y,slope=None):
     else:
         LSQ = lambda b: np.sum( (y-(slope*x+b))**2.0 )
         res = minimize(LSQ,x0=1,bounds=None)
-        (m,b) = (slope,res.x[0])
+        (m,b) = (slope,np.exp(res.x[0]))
 
     # calculate significance of linear regression
     # ANOVA()
@@ -126,7 +134,7 @@ def mad(x):
 ''' Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
     Handle Outliers", The ASQC Basic References in Quality Control:
     Statistical Techniques, Edward F. Mykytka, Ph.D., Editor.'''  
-def find_outliers(self,x,threshold=2):
+def find_outliers(x,threshold=2):
     '''Outlier detection method using Iglewicz & Hoaglin's modified Z-score
     Returns a list of bools, where True is an outlier'''
     (MAD,diff) = mad(x)
@@ -225,7 +233,7 @@ def normKLdiv(data,b):
     Q = np.ones(len(x))/len(x)
     KLdiv = entropy(P,Q)
     KLdivmax = entropy(Pmax,Q)
-    NKLdiv = D_KL/D_KL_max
+    NKLdiv = KLdiv/KLdivmax
 
     return (NKLdiv,KLdiv,KLdivmax)
 
@@ -234,7 +242,7 @@ def pdist(data,b,nbins=100,make_outliers_rand=True):
     of a set of data defined over the range (-b,b) with nbins
     Inputs:
         ignore_outliers (bool) = if True ignore outliers,
-                                 if False add random error to pdf
+                                 if False add random information to pdf
     Returns:
         pdf (array) = discrete pdf with probability of event i as pdf[i]
         x (array) = midpoints of the bins of the histogram that defines pdf'''
@@ -244,8 +252,8 @@ def pdist(data,b,nbins=100,make_outliers_rand=True):
 
     # calculate Pset (the pdf of the set of data points within the range)
     edges = np.linspace(-b,b,nbins+1)
-    Pset = np.histogram(data2,edges,density=True)
-    fset = len(data2)/len(error)
+    Pset,edges = np.histogram(data2,edges,density=True)
+    fset = len(data2)/len(data)
     x = (edges[0:-1]+edges[1:])/2
 
     if make_outliers_rand:

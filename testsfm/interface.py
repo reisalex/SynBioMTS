@@ -36,7 +36,7 @@ class Models(dict):
             ...     print seq, organism, temperature
             ...
             >>> models = Interface()
-            >>> models.register("RBSCalc2",RBS_Calculator_v2_0,'ACTAGC',temp=37.0)
+            >>> models.add("RBSCalc2",RBS_Calculator_v2_0,'ACTAGC',temp=37.0)
             >>> models.RBSCalc2('Escherichia coli')
             'ACTAGC' 'Escherichia coli' 37.0
 
@@ -75,13 +75,13 @@ class Models(dict):
     def __add__(self,another):
         assert another.__name__ == "Models", "Must add two Models to combine."
         for alias,pmodel in another.iteritems():
-            self.register(alias,pmodel)
+            self.add(alias,pmodel)
         return self
 
     def __sub__(self,another):
         assert another.__name__ == "Models", "Must subtract two Models to remove."
         for alias,pmodel in another.iteritems():
-            self.unregister(alias,pmodel)
+            self.remove(alias,pmodel)
         return self
 
 

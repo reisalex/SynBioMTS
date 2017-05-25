@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # For more general usage, use filter_by_label with label="DATASET"
 def select_datasets(database,datasets):
@@ -16,4 +17,5 @@ def filter_by_label(database,kargs):
     kargs = {k.upper(): v for k,v in kargs.iteritems()}
     for key in kargs.keys():
         assert key in database.keys(), "{} is not a label in the database".format(key)
-    return database[all(database[key].isin(val) for key,val in kargs)]
+    getindx = database[kargs.keys()].isin(kargs).all(1)
+    return database[getindx]

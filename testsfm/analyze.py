@@ -30,7 +30,7 @@ class ModelTest(object):
     ModelTest is the core of testsfm
     '''
 
-    def __init__(self,models,dbfilename,filters=None,nprocesses=mp.cpu_count(),recalc=False,verbose=False):
+    def __init__(self,models,dbfilename,filters={},nprocesses=mp.cpu_count(),recalc=False,verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
         dbfilename (string)           = filename of the geneticsystems database
@@ -56,18 +56,18 @@ class ModelTest(object):
 
         # Add read_Excel pandas code so users can have a database in a spreadsheet
 
-        listed = database["DATASET"].cat.categories
-        unlisted = [x for x in datasets if x not in listed]
-        if unlisted:
-            error = "These datasets are unlisted: " + ", ".join(unlisted)
-            raise ValueError(error)
+        if "DATASET" in filters:
+            listed = database["DATASET"].cat.categories
+            unlisted = [x for x in filters["DATASET"] if x not in listed]
+            if unlisted:
+                error = "These datasets are unlisted: " + ", ".join(unlisted)
+                raise ValueError(error)
         
         assert nprocesses > 0,          "nprocesses should be an int > 0"
         assert isinstance(recalc,bool), "recalc should be boolean"
         assert isinstance(filters,dict), "filters should be a dictionary"
 
         self.models     = models
-        self.datasets   = datasets
         self.dbfilename = dbfilename
         self.nprocesses = nprocesses
         self.recalc     = recalc
@@ -79,10 +79,10 @@ class ModelTest(object):
     def run(self,filename=None):
 
         # Filter database
-        if self.fitlers:
-            db = self.filter_by_label(self.database,self.filters)
+        if self.filters: db = dbms.filter_by_label(self.database,self.filters)
+        else:            db = self.database
 
-        entries = ( {k: db[k][i] for k in list(db)} for i in xrange(len(db)) )
+        entries = [ {k: db[k].iloc[i] for k in db} for i in xrange(len(db)) ]
         bundles = product(self.models.available,entries)
 
         if self.nprocesses > 1:
@@ -99,11 +99,13 @@ class ModelTest(object):
 
         for i in xrange(len(self.models.available)):
             name = self.models.available[i]
-            self.results[name] = pandas.DataFrame(output_by_model[i])
-            self.results[name]['ID'] = self.db['ID'] # ADD IDs
+            modelcalcs = output_by_model[i]
+            self.results[name] = pandas.DataFrame(modelcalcs)
+            self.results[name]["ID"] = list(db["ID"])
+            self.results[name]["SUBGROUP"] = list(db["SUBGROUP"])
 
         # write to shelve
-        if filename is not None:
+        if not filename is None:
             d = shelve.open(filename)
             d.update(self.results)
             d.close()
