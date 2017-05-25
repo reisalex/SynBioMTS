@@ -1,12 +1,30 @@
 #from NuPACK import NuPACK
 from ViennaRNA import ViennaRNA
-
 RNAEnergyModel = ViennaRNA
 
 import re
 import math
 
-from GeneticPartClasses import Class_RNA, Class_Ribosome_Binding_Site
+class Class_RNA(object):
+    """For bacteria: contains ribosome binding sites, anti-sense RNAs, RNAse binding sites, and terminators. For eukaryotes: contains ribosomal pause sites, microRNAs, RNAse binding sites, exons, introns, and terminators"""
+    def __repr__(self):
+        # output="RNA Sequence Information:\n"
+        # for RBS in self.RBS_list:
+            # output = output + RBS.__repr__()
+        # return output
+        return "RBS object here (too long!)"
+    pass
+
+class Class_Ribosome_Binding_Site(object):
+    """Information about the RBS surrounding a start codon in bacteria, including its interactions with the Ribosome or other RNAs."""
+    def __repr__(self):
+        # output = "Ribosome_Binding_Site Instance Information:\n"
+        # for attr in vars(self):
+            # value = getattr(self,attr)
+            # output += "Attribute: " + attr + "\t Value: " + str(value) + "\n"
+        # return output
+        return "RBS object here (too long!)"
+    pass
 
 class CalcError(Exception):
     """Base class for exceptions in this module."""
