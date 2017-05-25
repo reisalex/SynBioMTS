@@ -18,6 +18,13 @@ handle.close()
 
 # Required function in RBS Calculators and UTR Designer
 def get_rRNA(organism):
+    # temporary until I update database:
+    if organism=="Corynebacterium glutamicum B-2784":
+        organism = 'Corynebacterium glutamicum R'
+    elif organism=="Pseudomonas fluorescens A506":
+        return 'ACCTCCTTT'
+    else:
+        pass    
     return rRNA_16S_3p_ends[organism]
 
 def find_best_start(mRNA, start_pos, predictions):
@@ -207,12 +214,12 @@ if __name__ == "__main__":
 
     # add models to interface.Models
     transl_rate_models = testsfm.interface.Models()
-    transl_rate_models.add("RBSCalc_v1",RBSCalc_v1)
-    transl_rate_models.add("RBSCalc_v1_1",RBSCalc_v1_1)
+    # transl_rate_models.add("RBSCalc_v1",RBSCalc_v1)
+    # transl_rate_models.add("RBSCalc_v1_1",RBSCalc_v1_1)
     transl_rate_models.add("RBSCalc_v2",RBSCalc_v2)
-    transl_rate_models.add("UTRDesigner",wrap_UTR_Designer)
-    transl_rate_models.add("RBSDesigner",wrap_RBS_Designer)
-    transl_rate_models.add("EMOPEC",EMOPEC)
+    # transl_rate_models.add("UTRDesigner",wrap_UTR_Designer)
+    # transl_rate_models.add("RBSDesigner",wrap_RBS_Designer)
+    # transl_rate_models.add("EMOPEC",EMOPEC)
 
     # define database filters
     filters = { "DATASET": ['EspahBorujeni_NAR_2013',
@@ -229,6 +236,6 @@ if __name__ == "__main__":
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
 
-    # customtest = testsfm.analyze.ModelTest(transl_rate_models,datasets,dbfilename,nprocesses=1,verbose=True)
-    customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,datasets,verbose=True)
+    # customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
+    customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,verbose=True)
     customtest.run(filename='model_calcs.db')
