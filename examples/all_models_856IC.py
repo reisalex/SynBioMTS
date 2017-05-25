@@ -6,13 +6,16 @@ import cPickle as pickle
 # as a dictionary-like persistance object of pandas dataframes
 import shelve
 
-# Import RBS Calculator
+# Import models
 import sys
-sys.path.append('/home/alex/test-sfm/models')
+sys.path.append('../models')
+
+# Import private Salis Lab code (latest versions of RBS Calculator)
 sys.path.append('/home/alex/Private-Code')
 from DNAc import *
 
-handle = open('/home/alex/test-sfm/models/rRNA_16S_3p_ends.p','r')
+
+handle = open('../models/rRNA_16S_3p_ends.p','r')
 rRNA_16S_3p_ends = pickle.load(handle)
 handle.close()
 
