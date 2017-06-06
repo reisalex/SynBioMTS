@@ -616,7 +616,7 @@ class ViennaRNA(dict):
         # Legacy: Checks and setup
         if Temp <= 0: raise ValueError("The specified temperature must be greater than zero.")
         self["mfe_composition"] = strands
-
+        
         # New: PyVRNA execution
         constraint = constraints.split('&') if (not constraints is None and '&' in constraints) else constraints
         energy_model = PyVRNA(temperature=Temp, dangles=self.dangles_dict[dangles], gquad=self["Gquad"], parameter_file=self["RNA_model_param"], test_inputs=False)

@@ -21,11 +21,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=5, start_rowx=5, end_rowx=141),
+            "5pUTR"     : sheet.col_values(colx=5, start_rowx=5, end_rowx=141),
             "CDS"       : sheet.col_values(colx=6, start_rowx=5, end_rowx=141),
             "PROT.MEAN" : sheet.col_values(colx=8, start_rowx=5, end_rowx=141),
             "PROT.STD"  : sheet.col_values(colx=9, start_rowx=5, end_rowx=141),
@@ -39,16 +39,16 @@ def add_dataset(db,datasets):
         # Add extended dataset
         paperext = 'EspahBorujeni_NAR_2013_extended'
         path = '../datasets/{}.xls'.format(paperext)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
-        ds["5'UTR"]     += sheet.col_values(colx=3, start_rowx=3, end_rowx=42)
+        ds["5pUTR"]     += sheet.col_values(colx=3, start_rowx=3, end_rowx=42)
         ds["CDS"]       += sheet.col_values(colx=5, start_rowx=3, end_rowx=42)
         ds["PROT.MEAN"] += sheet.col_values(colx=8, start_rowx=3, end_rowx=42)
         ds["PROT.STD"]  += sheet.col_values(colx=9, start_rowx=3, end_rowx=42)
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -61,7 +61,7 @@ def add_dataset(db,datasets):
     
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -78,10 +78,10 @@ def add_dataset(db,datasets):
             "DATASET"       : paper
         }
 
-        ds["5'UTR"] = ["{}{}{}".format(pre,aptamer,post) for pre,aptamer,post \
+        ds["5pUTR"] = ["{}{}{}".format(pre,aptamer,post) for pre,aptamer,post \
                         in zip(ds["PRE.APTAMER"],ds["APTAMER"],ds["POST.APTAMER"])]
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -94,11 +94,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=3, start_rowx=6, end_rowx=42),
+            "5pUTR"     : sheet.col_values(colx=3, start_rowx=6, end_rowx=42),
             "CDS"       : sheet.col_values(colx=4, start_rowx=6, end_rowx=42),
             "PROT.MEAN" : sheet.col_values(colx=9, start_rowx=6, end_rowx=42),
             "PROT.STD"  : sheet.col_values(colx=10, start_rowx=6, end_rowx=42),
@@ -109,8 +109,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)        
@@ -123,11 +123,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=3, start_rowx=5, end_rowx=32),
+            "5pUTR"     : sheet.col_values(colx=3, start_rowx=5, end_rowx=32),
             "CDS"       : sheet.col_values(colx=4, start_rowx=5, end_rowx=32),
             "PROT.MEAN" : sheet.col_values(colx=10, start_rowx=5, end_rowx=32),
             "PROT.STD"  : sheet.col_values(colx=11, start_rowx=5, end_rowx=32),
@@ -138,8 +138,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -152,7 +152,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         # Need to parse this dataset for the start positions
@@ -173,7 +173,7 @@ def add_dataset(db,datasets):
             start_positions[i] = start_pos
 
         ds = {
-            "5'UTR"     : [seq[0:start_pos] for seq,start_pos in zip(excel_seqs,start_positions)],
+            "5pUTR"     : [seq[0:start_pos] for seq,start_pos in zip(excel_seqs,start_positions)],
             "CDS"       : [seq[start_pos:SacI_pos] + RFP1_CDS for seq,start_pos,SacI_pos in \
                             zip(excel_seqs,start_positions,SacI_positions)],
             "PROT.MEAN" : sheet.col_values(colx=4, start_rowx=3, end_rowx=135),
@@ -185,8 +185,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -199,7 +199,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -215,9 +215,9 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["5'UTR"] = ["{}{}".format(preseq,RBS) for preseq,RBS in zip(ds['PRESEQ'],ds['RBS'])]
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["5pUTR"] = ["{}{}".format(preseq,RBS) for preseq,RBS in zip(ds['PRESEQ'],ds['RBS'])]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)        
@@ -230,11 +230,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=4, start_rowx=2, end_rowx=26),
+            "5pUTR"     : sheet.col_values(colx=4, start_rowx=2, end_rowx=26),
             "CDS"       : sheet.col_values(colx=5, start_rowx=2, end_rowx=26),
             "PROT.MEAN" : sheet.col_values(colx=12, start_rowx=2, end_rowx=26),
             "PROT.STD"  : sheet.col_values(colx=13, start_rowx=2, end_rowx=26),
@@ -245,8 +245,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -259,11 +259,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=6, start_rowx=3, end_rowx=146),
+            "5pUTR"     : sheet.col_values(colx=6, start_rowx=3, end_rowx=146),
             "CDS"       : sheet.col_values(colx=7, start_rowx=3, end_rowx=146),
             "PROT.MEAN" : sheet.col_values(colx=8, start_rowx=3, end_rowx=146),
             "PROT.STD"  : sheet.col_values(colx=9, start_rowx=3, end_rowx=146),
@@ -274,8 +274,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -289,11 +289,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=5, start_rowx=1, end_rowx=107),
+            "5pUTR"     : sheet.col_values(colx=5, start_rowx=1, end_rowx=107),
             "CDS"       : sheet.col_values(colx=6, start_rowx=1, end_rowx=107),
             "PROT.MEAN" : sheet.col_values(colx=11, start_rowx=1, end_rowx=107),
             "PROT.STD"  : None,
@@ -304,8 +304,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -318,11 +318,11 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
         sheet = wb.sheet_by_index(0)
 
         ds = {
-            "5'UTR"     : sheet.col_values(colx=9, start_rowx=3, end_rowx=45),
+            "5pUTR"     : sheet.col_values(colx=9, start_rowx=3, end_rowx=45),
             "CDS"       : sheet.cell_value(47,1),
             "PROT.MEAN" : sheet.col_values(colx=6, start_rowx=3, end_rowx=45),
             "PROT.STD"  : sheet.col_values(colx=7, start_rowx=3, end_rowx=45),
@@ -333,8 +333,8 @@ def add_dataset(db,datasets):
             "DATASET"   : paper
         }
 
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["SEQUENCE"] = [UTR+ds["CDS"] for UTR in ds["5pUTR"]]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
@@ -346,7 +346,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
 
         # import promoter and RBS information
         sheet = wb.sheet_by_name("Promoters")
@@ -410,9 +410,9 @@ def add_dataset(db,datasets):
         ds["PROMOTER"] = [promoter_dict[ID]['SEQ'] for ID in ds["PROMOTER.ID"]]
         ds["TSS"] = [promoter_dict[ID]['TSS'] for ID in ds["PROMOTER.ID"]]
         ds["RBS"] = [RBS_dict[ID] for ID in ds['RBS.ID']]
-        ds["5'UTR"] = [p[TSS:]+RBS for p,TSS,RBS in zip(ds['PROMOTER'],ds['TSS'],ds['RBS'])]
-        ds["SEQUENCE"] = [UTR+ds["CDS"] for UTR in ds["5'UTR"]]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+        ds["5pUTR"] = [p[TSS:]+RBS for p,TSS,RBS in zip(ds['PROMOTER'],ds['TSS'],ds['RBS'])]
+        ds["SEQUENCE"] = [UTR+ds["CDS"] for UTR in ds["5pUTR"]]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
         ds = run_FS_calcs(ds,data)
         df = pd.DataFrame(ds)
@@ -426,7 +426,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r')
+        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
 
         # import Flow-seq required data to replicate calculations
         sheet = wb.sheet_by_name("NGS counts")
@@ -471,10 +471,10 @@ def add_dataset(db,datasets):
         for b,col in zip(bin_list,range(4,16)):
             ds[b] = np.array(sheet.col_values(colx=col, start_rowx=1, end_rowx=6598)).astype(float)
 
-        ds["5'UTR"] = [p[TSS:]+RBS+N+"CAT" for p,TSS,RBS,N in \
+        ds["5pUTR"] = [p[TSS:]+RBS+N+"CAT" for p,TSS,RBS,N in \
                                  zip(ds['PROMOTER'],ds['TSS'],ds['RBS'],ds['N.TERMINAL.CDS'])]
-        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]        
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]        
 
         ds = run_FS_calcs(ds,data)
         df = pd.DataFrame(ds)
@@ -483,11 +483,9 @@ def add_dataset(db,datasets):
     # Clean up, define categories based on organism/host/dataset
     db = _make_categories(db)
 
-    # Add seq IDs
-    nseqs = int(len(db))
-    padlen = int(np.ceil(np.log10(nseqs)))
-    db['ID'] = ['seq'+str(n).zfill(padlen) for n in xrange(1,nseqs+1)]
-
+    # Remove unicode strings
+    db = _remove_unicode(db)
+    
     return db
 
 def _make_categories(db):
@@ -503,9 +501,12 @@ def _make_categories(db):
     info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["DATASET"],db["ORGANISM"],db["PROTEIN"])]
     db["SUBGROUP"] = pd.Series(info, dtype="category")
     
-    # Get list of categories
-    # print db["subgroups"].cat.categories
-    
+    return db
+
+def _remove_unicode(db):
+    for label in db.keys():
+        if isinstance(db[label][0],unicode):
+            db[label] = db[label].str.encode('utf-8')
     return db
 
 def run_FS_calcs(ds,data):

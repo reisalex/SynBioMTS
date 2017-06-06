@@ -14,6 +14,8 @@ sys.path.append('../models')
 sys.path.append('/home/alex/Private-Code')
 from DNAc import *
 
+from PyVRNA import PyVRNA
+RNAEnergyModel = PyVRNA(dangles=0)
 
 handle = open('../models/rRNA_16S_3p_ends.p','r')
 rRNA_16S_3p_ends = pickle.load(handle)
@@ -127,6 +129,7 @@ def RBSCalc_v2(sequence,organism,temp,startpos):
     'dG_standby' : RBS.dG_standby,
     'dG_spacing' : RBS.dG_spacing,
     'used_mRNA_sequence' : RBS.sequence,
+    'bracket_string_mRNA': RBS.bracket_string_mRNA,
     'dG_UTR_fold' : RBS.dG_UTR_folding,
     'dG_SD_16S_hybrid' : RBS.dG_SD_hybridization,
     'dG_after_footprint' : RBS.dG_after_footprint_folding,
@@ -209,6 +212,68 @@ def EMOPEC(sequence,startpos):
     }
 
     return results
+
+def _calc_warning_flags(RBS):
+    # Calculate warning flags identified in Reis & Salis, 2017
+    # RNA structure overlapping the RBS > 17 nt long
+    
+    warning_dict = {}
+
+    # ----------------------------------------------------------------------
+    # Check for long structure that at least partially occludes the RBS
+    cutoff = 17
+    bpx = RBS.initial_structure['bp_x']
+    bpy = RBS.initial_structure['bp_y']
+    RBSposi = RBS.most_3p_paired_SD_mRNA
+    RBSposj = RBS.start_position + 13
+    y0 = -1
+    warning_dict["RBS_hairpin_lengths"] = []
+    for x,y in zip(bpx,bpy):
+        if x > y0:
+            if x<RBSposi and y>RBSposi:
+                warning_dict["RBS_hairpin_lengths"].append(y-x)
+                y0 = y
+    if any(length > cutoff for length in warning_dict["RBS_hairpin_lengths"]):
+        warning_dict["LONG_RBS_HAIRPIN"] = True
+    else:
+        warning_dict["LONG_RBS_HAIRPIN"] = False
+
+    # ----------------------------------------------------------------------
+    # Check for stable refolding of standby site structure (ddG_standby < -2 kcal/mol)
+    # Where ddG_standby_site = dG_pre_ribosome - dG_standby_site_initial
+    cutoff = -2.0
+    y0 = -1
+    dG_initial_list = []
+    for x,y in zip(bpx,bpy):
+        if x > y0:
+            PyVRNA_fold_result = RNAEnergyModel.RNAfold(RBS.sequence[x:y+1])
+            dG_initial_list.append(PyVRNA_fold_result.energy)
+            y0 = y
+    dG_standby_site_initial = sum(dG_initial_list)
+    dG_pre_ribosome = RNAEnergyModel.RNAfold(RBS.sequence[x:y+1]).energy
+    ddG_standby_site = dG_pre_ribosome - dG_standby_site_initial
+    warning_dict["ddG_standby_site"] = ddG_standby_site
+    if ddG_standby_site < cutoff:
+        warning_dict["STABLE_STANDBY_SITE_REFOLD"] = True
+    else:
+        warning_dict["STABLE_STANDBY_SITE_REFOLD"] = False
+
+    # ----------------------------------------------------------------------
+    # Check for sequences with minimal ssRNA regions (ssRNA < 5 nt)
+    cutoff = 5
+    warning_dict["ssRNA_lengths"] = []
+    y0 = -1
+    for x,y in zip(bpx,bpy):
+        if x > y0:
+            warning_dict["ssRNA_lengths"].append(x-y0)
+            y0 = y
+    if any(length > cutoff for length in warning_dict["ssRNA_lengths"]):
+        warning_dict["MINIMAL_ssRNA"] = True
+    else:
+        warning_dict["MINIMAL_ssRNA"] = False
+
+    return warning_dict
+
 
 if __name__ == "__main__":
 

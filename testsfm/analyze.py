@@ -57,7 +57,7 @@ class ModelTest(object):
         except:
             raise Exception("Database filename: {} is not valid.".format(dbfilename))
 
-        for i in identifiers:
+        for i in self.identifiers:
             assert i in database.keys(), "{} isn't a database label.".format(i)
 
         # Add read_Excel pandas code so users can have a database in a spreadsheet
@@ -69,14 +69,16 @@ class ModelTest(object):
                 error = "These datasets are unlisted: " + ", ".join(unlisted)
                 raise ValueError(error)
         
-        assert nprocesses > 0,          "nprocesses should be an int > 0"
-        assert isinstance(recalc,bool), "recalc should be boolean"
-        assert isinstance(filters,dict), "filters should be a dictionary"
+        assert nprocesses > 0,            "nprocesses should be an int > 0"
+        assert isinstance(recalc,bool),   "recalc should be boolean"
+        assert isinstance(add_data,bool), "add_data should be boolean"
+        assert isinstance(filters,dict),  "filters should be a dictionary"
 
         self.models     = models
         self.dbfilename = dbfilename
-        self.nprocesses = nprocesses
         self.recalc     = recalc
+        self.add_data   = add_data
+        self.nprocesses = nprocesses
         self.verbose    = verbose
         self.database   = database
         self.filters    = filters
@@ -92,22 +94,26 @@ class ModelTest(object):
         # convert pandas dataframe into entries, a list of records (dictionaries)
         # then bundle these entries with the models that are available
         num_entries = []
-        if not self.recalc and not filename is None:
+        
+        if (not self.recalc) and (not filename is None):
+            bundles = []
             d = shelve.open(filename)
             for model in self.models.available:
-                kargs = {i: d[mode][i] for i in self.identifiers}
-                db = dbms.remove(db,kargs,ordered=True)
-                entries = db.T.to_dict().values()
-                num_entries.append((model,len(entries)))
-                bundles += [(model,entry) for entry in entries]
+                if model in d.keys():
+                    kargs = {i: d[model][i] for i in self.identifiers}
+                    db = dbms.remove(db,kargs,ordered=True)
+                    entries = db.T.to_dict().values()
+                    num_entries.append((model,len(entries)))
+                    bundles += [(model,entry) for entry in entries]
+                else:
+                    entries = db.T.to_dict().values()
+                    bundles += product([model],entries)
+                    num_entries.append((model,len(entries)))
             d.close()
         else:
             entries = db.T.to_dict().values()
             bundles = product(self.models.available,entries)
-
-        print len(entries)
-        print len(bundles)
-        wait = input(" ")
+            num_entries = product(self.models.available,len(entries))
 
         if self.nprocesses > 1:
             pool = mp.Pool(processes=self.nprocesses) # consider chunking
@@ -116,19 +122,18 @@ class ModelTest(object):
             pool.join()
         else:
             output = [self._wrap(bundle) for bundle in bundles]
-
+        
+        db.reset_index(drop=True, inplace=True)
         total = 0
         for model,n in num_entries:
             modelcalcs = pandas.DataFrame(output[total:total+n])
-            if add_data:
-                dfsave = pd.concat([db, modelcalcs], axis=1)
+            if self.add_data:
+                dfsave = pandas.concat([db, modelcalcs], axis=1)
             else:
-                dfsave = pd.concat([db[self.identifiers], modelcalcs], axis=1)
+                dfsave = pandas.concat([db[self.identifiers], modelcalcs], axis=1)
             self.results[model] = dfsave
             print dfsave
             total += n
-
-        wait = input(" ")
 
         # write to shelve
         if not filename is None:
@@ -167,8 +172,8 @@ class ModelTest(object):
 
         # Print if verbose
         if self.verbose:
-            fmt = "model={m:s}, ID={ID:s}, seq={seq:s}"
-            print fmt.format(m=name,ID=entry['ID'],seq=entry['SEQUENCE'][:50])
+            fmt = "model={m:s}, SUBGROUP={sbgrp:s}, seq={seq:s}"
+            print fmt.format(m=name,sbgrp=entry['SUBGROUP'],seq=entry['SEQUENCE'][:50])
 
         # Run model
         # Using keyword argument unpacking to pass only requested args
