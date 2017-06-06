@@ -30,7 +30,10 @@ class ModelTest(object):
     ModelTest is the core of testsfm
     '''
 
-    def __init__(self,models,dbfilename,filters={},nprocesses=mp.cpu_count(),recalc=False,verbose=False):
+    # identifiers is used to uniquely identify sequence entries
+    identifiers = ["SEQUENCE","SUBGROUP"]
+
+    def __init__(self,models,dbfilename,filters={},recalc=False,add_data=False,nprocesses=mp.cpu_count(),verbose=False):
         '''Inputs:
         models (interface.Models obj) = see interface.Models
         dbfilename (string)           = filename of the geneticsystems database
@@ -53,6 +56,9 @@ class ModelTest(object):
             assert str(type(database)) == "<class 'pandas.core.frame.DataFrame'>"
         except:
             raise Exception("Database filename: {} is not valid.".format(dbfilename))
+
+        for i in identifiers:
+            assert i in database.keys(), "{} isn't a database label.".format(i)
 
         # Add read_Excel pandas code so users can have a database in a spreadsheet
 
@@ -78,12 +84,30 @@ class ModelTest(object):
 
     def run(self,filename=None):
 
-        # Filter database
-        if self.filters: db = dbms.filter_by_label(self.database,self.filters)
-        else:            db = self.database
+        # Use self.filters to keep only genetic systems of interest
+        if self.filters: db = dbms.filter(self.database,self.filters,False)
+        else: db = self.database
 
-        entries = [ {k: db[k].iloc[i] for k in db} for i in xrange(len(db)) ]
-        bundles = product(self.models.available,entries)
+        # Remove sequences that have already been calculated if self.recalc is False,
+        # convert pandas dataframe into entries, a list of records (dictionaries)
+        # then bundle these entries with the models that are available
+        num_entries = []
+        if not self.recalc and not filename is None:
+            d = shelve.open(filename)
+            for model in self.models.available:
+                kargs = {i: d[mode][i] for i in self.identifiers}
+                db = dbms.remove(db,kargs,ordered=True)
+                entries = db.T.to_dict().values()
+                num_entries.append((model,len(entries)))
+                bundles += [(model,entry) for entry in entries]
+            d.close()
+        else:
+            entries = db.T.to_dict().values()
+            bundles = product(self.models.available,entries)
+
+        print len(entries)
+        print len(bundles)
+        wait = input(" ")
 
         if self.nprocesses > 1:
             pool = mp.Pool(processes=self.nprocesses) # consider chunking
@@ -93,21 +117,27 @@ class ModelTest(object):
         else:
             output = [self._wrap(bundle) for bundle in bundles]
 
-        # Convert model output to pandas dataframe and pickle
-        chunksize = len(output)/len(self.models)
-        output_by_model = [output[x:x+chunksize] for x in xrange(0,len(output),chunksize)]
+        total = 0
+        for model,n in num_entries:
+            modelcalcs = pandas.DataFrame(output[total:total+n])
+            if add_data:
+                dfsave = pd.concat([db, modelcalcs], axis=1)
+            else:
+                dfsave = pd.concat([db[self.identifiers], modelcalcs], axis=1)
+            self.results[model] = dfsave
+            print dfsave
+            total += n
 
-        for i in xrange(len(self.models.available)):
-            name = self.models.available[i]
-            modelcalcs = output_by_model[i]
-            self.results[name] = pandas.DataFrame(modelcalcs)
-            self.results[name]["ID"] = list(db["ID"])
-            self.results[name]["SUBGROUP"] = list(db["SUBGROUP"])
+        wait = input(" ")
 
         # write to shelve
         if not filename is None:
             d = shelve.open(filename)
-            d.update(self.results)
+            if not d:
+                d.update(self.results)
+            else:
+                for model in self.models.available:
+                    d[model] = dbms.udpate(d[model],self.results[model],self.identifiers)
             d.close()
 
     def _wrap(self,bundle):
@@ -153,13 +183,13 @@ class ModelTest(object):
         self.datasets = [ds for ds in self.datasets[:] if ds not in datasets]
 
     def add_filters(self,filters):
-        pass
+        self.filters.update(filters)
 
-    def add_model(self,alias,model):
-        pass
+    def add_model(self,alias,model,args,kargs):
+        self.models.add(alias, model, args, kargs)
 
-    def remove_model(self,alias,model):
-        pass
+    def remove_model(self,alias):
+        self.models.remove(alias)
 
     def calcstats(self):
         pass
@@ -170,7 +200,7 @@ class ModelTest(object):
     def propertyerror(self):
         pass
 
-    def _export(self):
+    def export(self):
         pass
 
     def export2mat(self):
