@@ -311,6 +311,34 @@ def add_dataset(db,datasets):
         db = db.append(df, ignore_index=True)
 
 
+    '''Robert G Egbert and Eric Klavins
+    Fine-tuning gene networks using simple sequence repeats
+    PNAS, 109: 42, 16817-16822, 2012'''
+    paper = 'Egbert_Spacers_PNAS_2012'
+
+    if paper in datasets:
+        path = '../datasets/{}.xls'.format(paper)
+        wb = xlrd.open_workbook(path,'r')
+        sheet = wb.sheet_by_index(0)
+
+        ds = {
+            "5'UTR"     : sheet.col_values(colx=9, start_rowx=3, end_rowx=45),
+            "CDS"       : sheet.cell_value(47,1),
+            "PROT.MEAN" : sheet.col_values(colx=6, start_rowx=3, end_rowx=45),
+            "PROT.STD"  : sheet.col_values(colx=7, start_rowx=3, end_rowx=45),
+            "PROTEIN"   : "GFP",
+            "ORGANISM"  : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"    : "Individually Characterized",
+            "TEMP"      : 37.0,
+            "DATASET"   : paper
+        }
+
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5'UTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5'UTR"]]
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
     '''Sriram Kosuri, Daniel B. Goodman, George M. Church
     Composability of regulatory sequences controlling transcription and translation in Escherichia coli
     Proc Natl Acad Sci USA, 2013, Vol. 110 no. 34'''
@@ -552,6 +580,7 @@ if __name__ == "__main__":
                 'Tian_NAR_2015',            # TranslationCoupling
                 'Mimee_Cell_Sys_2015',      # Bthetaiotaomicron
                 'Bonde_NatMethods_IC_2016', # EMOPEC
+                'Egbert_Spacers_PNAS_2012', # SpacerComposition
                 'Kosuri_PNAS_2013',         # Kosuri
                 'Goodman_Science_2013'      # Goodman
                 ]
