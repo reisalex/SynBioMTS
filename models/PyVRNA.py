@@ -405,7 +405,7 @@ class PyVRNA(object):
         # Return the fold structure and energy of all suboptimal structures
         return subopt_list
 
-    def GenerateSLF(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def GenerateSLFTuple(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
         Returns a customized slf_tuple from input bpx, bpy, pkx, pky and gquad lists.
 
@@ -416,7 +416,7 @@ class PyVRNA(object):
         """
         # Test if the inputs are valid
         if self.test_inputs:
-            self._test_slf_tuple(length=length, bpx=bpx, bpy=bpy, pkx=pkx, pky=pky, gquad=gquad, func_name='GenerateSLF')
+            self._test_slf_tuple(length=length, bpx=bpx, bpy=bpy, pkx=pkx, pky=pky, gquad=gquad, func_name='GenerateSLFTuple')
         
         # Create and return the customized slf_tuple
         return self.PyVRNA_slf_result(length=length, bpx=list(bpx), bpy=list(bpy), pkx=list(pkx), pky=list(pky), gquad=list(gquad))
@@ -441,7 +441,7 @@ class PyVRNA(object):
             assert set(vienna_string) <= set('.([+])'), 'in ViennaToSLF: vienna_string must be a string of .([+]) characters only.'
 
         # Setup data structures and variables for computing SLF     
-        slf_tuple          = self.GenerateSLF(length=len(vienna_string))
+        slf_tuple          = self.GenerateSLFTuple(length=len(vienna_string))
         bp_stack, pk_stack = [], []
         bp_dict, pk_dict   = OrderedDict(), OrderedDict()
         has_gquad          = False
@@ -496,7 +496,7 @@ class PyVRNA(object):
         # Return SLF tuple
         return slf_tuple
 
-    def GenerateSLFToVienna(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def GenerateSLFToVienna(self, length, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
         Creates a customized slf_tuple from input bpx, bpy, pkx, pky and gquad lists and returns the vienna_string encoded by it.
 

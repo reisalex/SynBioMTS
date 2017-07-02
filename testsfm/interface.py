@@ -6,26 +6,29 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
   
 """
 
-import stats
+import numbers
 import inspect
 from functools import partial
 
-class Models(dict):
+'''
+class Model(obj):
+    def __init__(self):
+        pass
+'''
+
+class Container(dict):
     __name__ = "Models"
+    form = {}
 
     def __init__(self):
         pass
 
-    def add(self, alias, model, *args, **kargs):
-        '''Register a model with the interface under the name *alias*. You
-        may provide default arguments that will be passed automatically when
-        calling the registered model. Fixed arguments can then be overriden
-        at model call time.
+    def add(self, model, *args, **kargs):
+        '''Register a model with the model Container. You may provide default
+        arguments that will be passed automatically when calling the registered
+        model. Fixed arguments can then be overriden at model call time.
         Inputs:
-        alias (string) = The name the operator will take in the interface. If
-                         the alias already exist it will overwrite the the
-                         operator already present.
-        model (object) = The model to which refer the alias.
+        model (object) = The model to which refer the name.
         argument       = One or more argument (and keyword argument) to pass
                          automatically to the registered model when called,
                          optional.
@@ -35,22 +38,19 @@ class Models(dict):
             ...     # run model code here
             ...     print seq, organism, temperature
             ...
-            >>> models = Interface()
-            >>> models.add("RBSCalc2",RBS_Calculator_v2_0,'ACTAGC',temp=37.0)
+            >>> models = Container()
+            >>> models.add(RBS_Calculator_v2_0,'ACTAGC',temp=37.0)
             >>> models.RBSCalc2('Escherichia coli')
             'ACTAGC' 'Escherichia coli' 37.0
 
         The registered model will be given the attributes :attr:`__name__`
-        set to the alias and :attr:`__doc__` set to the original model's
+        set to the name and :attr:`__doc__` set to the original model's
         documentation. The :attr:`__dict__` attribute will also be updated
         with the original model's instance dictionary, if any. '''
-
-        # Adapted from DEAP's base.Toolbox
-        # https://github.com/DEAP/deap
-
+        
         pmodel = partial(model, *args, **kargs)
-        pmodel.__name__ = alias
         pmodel.__doc__ = model.__doc__
+        name = model.__name__
         ArgSpec = inspect.getargspec(model)
         pmodel.variables = ArgSpec[0]
 
@@ -60,28 +60,48 @@ class Models(dict):
             # a class, we do not want to copy the dictionary.
             pmodel.__dict__.update(model.__dict__.copy())
 
-        setattr(self, alias, pmodel)
-        self[alias] = pmodel
+        setattr(self, name, pmodel) # not currently used
+        self[name] = pmodel
         self.available = sorted(self.keys())
 
-    def remove(self, alias):
-        '''Unregister *alias* from the model interface.
-        alias (string) = The name of the operator to remove from the interface.
+    def remove(self, model):
+        '''Unregister model from the model Container.
+        model (string or function) = Can be a string or the function itself
         '''
-        delattr(self, alias)
-        self.pop(alias)
+        name = model if isinstance(model,str) else model.__name__
+        assert name in self.available, "{} is not registered with the Container.".format(name)
+        delattr(self, name)
+        self.pop(name)
         self.available = sorted(self.keys())
+
+    def setform(self, modelNames, x, y, yScale='log10', a1=None):
+
+        yScale_options = ['linear','ln','log10']
+        for model in modelNames:
+            assert model in self.available, "Model {} not in container.".format(model)
+        assert isinstance(x,str), "x should be a string, is {}.".format(type(x))
+        assert isinstance(y,str), "y should be a string, is {}.".format(type(y))
+        assert yScale in yScale_options, "yScale should be one of: {}".format(yScale_options)
+        if not a1 is None:
+            assert isinstance(a1,(int,float)), "a1, {}, is the slope and should be a number.".format(a1)
+
+        for name in modelNames:
+            self[name].x = x
+            self[name].y = y
+            self[name].yScale = yScale
+            self[name].a1 = float(a1) if isinstance(a1,(int,float)) else None
+            # self.form[name] = {'x': x, 'y': y, 'yScale': yScale,  'a1': float(a1)}
 
     def __add__(self,another):
         assert another.__name__ == "Models", "Must add two Models to combine."
-        for alias,pmodel in another.iteritems():
-            self.add(alias,pmodel)
+        for name,pmodel in another.iteritems():
+            self.add(name,pmodel)
         return self
 
     def __sub__(self,another):
         assert another.__name__ == "Models", "Must subtract two Models to remove."
-        for alias,pmodel in another.iteritems():
-            self.remove(alias,pmodel)
+        for name,pmodel in another.iteritems():
+            self.remove(name,pmodel)
         return self
 
 

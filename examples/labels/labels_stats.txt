@@ -1,0 +1,14 @@
+SUBGROUP
+Pearson R-squared
+Pearson p
+Spearman R-squared
+Spearman p
+N-outliers
+slope
+intercept
+2-fold Error
+5-fold Error
+10-fold Error
+Normalized KL-divergence
+KL-divergence
+Max KL-divergence

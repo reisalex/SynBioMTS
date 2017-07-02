@@ -21,7 +21,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -39,7 +39,7 @@ def add_dataset(db,datasets):
         # Add extended dataset
         paperext = 'EspahBorujeni_NAR_2013_extended'
         path = '../datasets/{}.xls'.format(paperext)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds["5pUTR"]     += sheet.col_values(colx=3, start_rowx=3, end_rowx=42)
@@ -61,7 +61,7 @@ def add_dataset(db,datasets):
     
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -94,7 +94,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -123,7 +123,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -152,7 +152,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         # Need to parse this dataset for the start positions
@@ -199,7 +199,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -230,7 +230,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -259,7 +259,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -289,7 +289,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -318,7 +318,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
         ds = {
@@ -339,6 +339,112 @@ def add_dataset(db,datasets):
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
 
+    '''Ariel Hecht, Jeff Glasgow, Paul R. Jaschke, Lukmaan A. Bawazer, Drew Endy, Marc Salit
+    Measurements of translation initiation from all 64 codons in E. coli
+    Nucleic Acids Research, 45: 7, 3615-3626, 2017'''
+    paper = 'Hecht_NAR_2017'
+
+    if paper in datasets:
+        path = '../datasets/{}.xls'.format(paper)
+        wb = xlrd.open_workbook(path,'r')
+        sheet = wb.sheet_by_name('Figure 3B')
+        ds = {
+            "PROMOTER"    : sheet.cell_value(17,1),
+            "5pUTR"       : sheet.cell_value(18,1),
+            "CDS"         : sheet.cell_value(19,1),
+            "START.CODON" : sheet.col_values(colx=0,  start_rowx=2, end_rowx=14),
+            "PROT.MEAN"   : sheet.col_values(colx=10, start_rowx=2, end_rowx=14),
+            "PROT.STD"    : sheet.col_values(colx=11, start_rowx=2, end_rowx=14),
+            "PROTEIN"     : "NanoLuc",
+            "PLASMID"     : "p15A",
+            "ORGANISM"    : "Escherichia coli BL21(DE3)",
+            "METHOD"      : "Individually Characterized",
+            "TEMP"        : 37.0,
+            "DATASET"     : paper
+        }
+
+        ds["SEQUENCE"] = [ds["5pUTR"]+START+ds["CDS"] for START in ds["START.CODON"]]
+        ds["STARTPOS"] = len(ds["5pUTR"])
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
+        sheet = wb.sheet_by_name('Figure 3C')
+        ds = {
+            "PROMOTER"    : sheet.cell_value(17,1),
+            "5pUTR"       : sheet.cell_value(18,1),
+            "CDS"         : sheet.cell_value(19,1),
+            "START.CODON" : sheet.col_values(colx=0,  start_rowx=2, end_rowx=14),
+            "PROT.MEAN"   : sheet.col_values(colx=10, start_rowx=2, end_rowx=14),
+            "PROT.STD"    : sheet.col_values(colx=11, start_rowx=2, end_rowx=14),
+            "PROTEIN"     : "NanoLuc",
+            "PLASMID"     : "oriS/BAC",
+            "ORGANISM"    : "Escherichia coli BL21(DE3)",
+            "METHOD"      : "Individually Characterized",
+            "TEMP"        : 37.0,
+            "DATASET"     : paper
+        }
+
+        ds["SEQUENCE"] = [ds["5pUTR"]+START+ds["CDS"] for START in ds["START.CODON"]]
+        ds["STARTPOS"] = len(ds["5pUTR"])        
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
+        sheet = wb.sheet_by_name('Figure 2')
+        ds = {
+            "PROMOTER"    : sheet.cell_value(111,1),
+            "5pUTR"       : sheet.cell_value(112,1),
+            "CDS"         : sheet.cell_value(113,1),
+            "START.CODON" : sheet.col_values(colx=0, start_rowx=96, end_rowx=107),
+            "PROT.MEAN"   : sheet.col_values(colx=5, start_rowx=96, end_rowx=107),
+            "PROT.STD"    : sheet.col_values(colx=6, start_rowx=96, end_rowx=107),
+            "PROTEIN"     : "sfGFP",
+            "PLASMID"     : "pET20b",
+            "ORGANISM"    : "Escherichia coli BL21(DE3)",
+            "METHOD"      : "Individually Characterized",
+            "TEMP"        : 37.0,
+            "DATASET"     : paper
+        }
+
+        ds["SEQUENCE"] = [ds["5pUTR"]+START+ds["CDS"] for START in ds["START.CODON"]]
+        ds["STARTPOS"] = len(ds["5pUTR"])        
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
+    '''Heather J. Beck, Ian M. C. Fleming, Gary R. Janssen
+    5'-Terminal AUGs in Escherichia coli mRNAs with Shine-Dalgarno Sequences:
+    Identification and Analysis of Their Roles in Non-Canonical Translation Initiation
+    PLoS ONE 11(7), 2016'''
+    paper = 'Beck_PLoS_2016'
+
+    if paper in datasets:
+        path = '../datasets/{}.xls'.format(paper)
+        wb = xlrd.open_workbook(path,'r')
+        sheet = wb.sheet_by_name('Sheet2')
+
+        SalI = sheet.cell_value(43,2)
+
+        ds = {
+            "CDS"         : sheet.cell_value(44,2),
+            "GENE"        : sheet.col_values(colx=1, start_rowx=1, end_rowx=36),
+            "ORF"         : sheet.col_values(colx=3, start_rowx=1, end_rowx=36),
+            "PROT.MEAN"   : sheet.col_values(colx=7, start_rowx=1, end_rowx=36),
+            "PROT.STD"    : sheet.col_values(colx=6, start_rowx=1, end_rowx=36),
+            "PROTEIN"     : "LacZ-fusion",
+            "ORGANISM"    : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"      : "Individually Characterized",
+            "TEMP"        : 30.0, # educated guess
+            "DATASET"     : paper
+        }
+
+        ds["SEQUENCE"] = [ORF+SalI+ds["CDS"] for ORF in ds["ORF"]]
+        ds["STARTPOS"] = [len(ORF)+6 for ORF in ds["ORF"]]
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
     '''Sriram Kosuri, Daniel B. Goodman, George M. Church
     Composability of regulatory sequences controlling transcription and translation in Escherichia coli
     Proc Natl Acad Sci USA, 2013, Vol. 110 no. 34'''
@@ -346,7 +452,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
 
         # import promoter and RBS information
         sheet = wb.sheet_by_name("Promoters")
@@ -426,7 +532,7 @@ def add_dataset(db,datasets):
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
-        wb = xlrd.open_workbook(path,'r',encoding_override='utf-8')
+        wb = xlrd.open_workbook(path,'r')
 
         # import Flow-seq required data to replicate calculations
         sheet = wb.sheet_by_name("NGS counts")
@@ -498,9 +604,8 @@ def _make_categories(db):
 
     # And let's define sub-groups of sequences categorized:
     # At the same time, in the same organism, with the same promoter, and same experimental conditions
-    info = ["{}+{}+{}".format(p,o,g) for p,o,g in zip(db["DATASET"],db["ORGANISM"],db["PROTEIN"])]
+    info = ["{}+{}+{}+{}".format(d,o,g,p) for d,o,g,p in zip(db["DATASET"],db["ORGANISM"],db["PROTEIN"],db["PLASMID"])]
     db["SUBGROUP"] = pd.Series(info, dtype="category")
-    
     return db
 
 def _remove_unicode(db):
@@ -552,6 +657,15 @@ def run_FS_calcs(ds,data):
     ds["PROT.VAR"] = var
     ds["PROT.STD"] = np.sqrt(ds["PROT.VAR"])    
     
+    '''
+    # Calculate variance on a log-scale
+    var2 = 0.0
+    for b in data['bin_list']:
+        var2 += a[b]*( np.log(data['bins'][b]['fluo']) - np.log(ds["PROT.MEAN"]) )**2.0
+
+    print len(ds["PROT.MEAN"]),np.mean(ds["PROT.MEAN"]),np.sqrt(np.mean(ds["PROT.VAR"])),np.sqrt(np.mean(var2))
+    '''
+
     # Calculate apparent translation rate
     ds["TRANSL.RATE"] = ds["PROT.MEAN"]/ds["RNA"]
     ds["TRANSL.RATE.VAR"] = approx_var_ratio(ds["PROT.MEAN"],ds["PROT.VAR"],ds["RNA"],ds["RNA.VAR"])
@@ -582,6 +696,8 @@ if __name__ == "__main__":
                 'Mimee_Cell_Sys_2015',      # Bthetaiotaomicron
                 'Bonde_NatMethods_IC_2016', # EMOPEC
                 'Egbert_Spacers_PNAS_2012', # SpacerComposition
+                'Hecht_NAR_2017',           # HechtStartCodons
+                'Beck_PLoS_2016',           # Beck Leaderless mRNA
                 'Kosuri_PNAS_2013',         # Kosuri
                 'Goodman_Science_2013'      # Goodman
                 ]

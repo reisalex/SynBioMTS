@@ -11,9 +11,11 @@ import cPickle as pickle
 from itertools import product
 import multiprocessing as mp
 import scipy
+import numpy as np
 import pandas
 import shelve
 import dbms
+import stats
 
 # Using copy_reg to allow the pickle module to instance methods
 # Replicates multiprocessing module's ForkingPickler
@@ -26,16 +28,13 @@ copy_reg.pickle(types.MethodType, _reduce_method)
 
 
 class ModelTest(object):
-    '''
-    ModelTest is the core of testsfm
-    '''
 
     # identifiers is used to uniquely identify sequence entries
     identifiers = ["SEQUENCE","SUBGROUP"]
 
-    def __init__(self,models,dbfilename,filters={},recalc=False,add_data=False,nprocesses=mp.cpu_count(),verbose=False):
+    def __init__(self,models,dbfilename,filters={},recalc=False,add_data=True,nprocesses=mp.cpu_count(),verbose=False):
         '''Inputs:
-        models (interface.Models obj) = see interface.Models
+        models (interface.Container obj) = see interface.Container
         dbfilename (string)           = filename of the geneticsystems database
         filters (dictionary)          = dictionary to filter dataset using dbms
         nprocesses (int)              = number of processes to use with
@@ -47,54 +46,39 @@ class ModelTest(object):
         verbose (bool)                = talk to me'''
 
         if models.__name__ != "Models":
-            raise Exception("Not an interface.Models object: {}.".format(models))
-
-        try:
-            handle = open(dbfilename,'r')
-            database = pickle.load(handle)
-            handle.close()
-            assert str(type(database)) == "<class 'pandas.core.frame.DataFrame'>"
-        except:
-            raise Exception("Database filename: {} is not valid.".format(dbfilename))
-
-        for i in self.identifiers:
-            assert i in database.keys(), "{} isn't a database label.".format(i)
-
-        # Add read_Excel pandas code so users can have a database in a spreadsheet
-
-        if "DATASET" in filters:
-            listed = database["DATASET"].cat.categories
-            unlisted = [x for x in filters["DATASET"] if x not in listed]
-            if unlisted:
-                error = "These datasets are unlisted: " + ", ".join(unlisted)
-                raise ValueError(error)
+            raise Exception("Not an interface.Container object: {}.".format(models))
         
         assert nprocesses > 0,            "nprocesses should be an int > 0"
         assert isinstance(recalc,bool),   "recalc should be boolean"
         assert isinstance(add_data,bool), "add_data should be boolean"
         assert isinstance(filters,dict),  "filters should be a dictionary"
 
-        self.models     = models
-        self.dbfilename = dbfilename
-        self.recalc     = recalc
-        self.add_data   = add_data
-        self.nprocesses = nprocesses
-        self.verbose    = verbose
-        self.database   = database
-        self.filters    = filters
-        self.results    = {}
+        self.models      = models
+        self.dbfilename  = dbfilename
+        self.recalc      = recalc
+        self.add_data    = add_data
+        self.nprocesses  = nprocesses
+        self.verbose     = verbose
+        self.filters     = filters
+        self.predictions = {}
+        self.statistics  = {}
 
-    def run(self,filename=None):
+        # import sequences from genetic systems database
+        # based on specified dbfilename and filters
+        self._update_database()        
 
-        # Use self.filters to keep only genetic systems of interest
-        if self.filters: db = dbms.filter(self.database,self.filters,False)
-        else: db = self.database
+    def run(self,calcsFilename=None,statsFilename=None):
+        self.predict(calcsFilename)
+        self.calc_stats(statsFilename)
+
+    def predict(self,filename=None):
+
+        db = self.database
 
         # Remove sequences that have already been calculated if self.recalc is False,
         # convert pandas dataframe into entries, a list of records (dictionaries)
         # then bundle these entries with the models that are available
-        num_entries = []
-        
+        n_entries = []
         if (not self.recalc) and (not filename is None):
             bundles = []
             d = shelve.open(filename)
@@ -102,18 +86,19 @@ class ModelTest(object):
                 if model in d.keys():
                     kargs = {i: d[model][i] for i in self.identifiers}
                     db = dbms.remove(db,kargs,ordered=True)
-                    entries = db.T.to_dict().values()
-                    num_entries.append((model,len(entries)))
-                    bundles += [(model,entry) for entry in entries]
+                    dict_list = dbms.to_dict_list(db)
+                    n_entries.append((model,len(dict_list)))
+                    bundles += [(model,entry) for entry in dict_list]
                 else:
-                    entries = db.T.to_dict().values()
-                    bundles += product([model],entries)
-                    num_entries.append((model,len(entries)))
+                    dict_list = dbms.to_dict_list(db)
+                    bundles += product([model],dict_list)
+                    n_entries.append((model,len(dict_list)))
             d.close()
         else:
-            entries = db.T.to_dict().values()
-            bundles = product(self.models.available,entries)
-            num_entries = product(self.models.available,len(entries))
+            dict_list = dbms.to_dict_list(db)
+            bundles = product(self.models.available,dict_list)
+            n = len(dict_list)
+            n_entries = [(m,n) for m in self.models.available]
 
         if self.nprocesses > 1:
             pool = mp.Pool(processes=self.nprocesses) # consider chunking
@@ -125,25 +110,14 @@ class ModelTest(object):
         
         db.reset_index(drop=True, inplace=True)
         total = 0
-        for model,n in num_entries:
+        for model,n in n_entries:
             modelcalcs = pandas.DataFrame(output[total:total+n])
             if self.add_data:
                 dfsave = pandas.concat([db, modelcalcs], axis=1)
             else:
                 dfsave = pandas.concat([db[self.identifiers], modelcalcs], axis=1)
-            self.results[model] = dfsave
-            print dfsave
+            self.predictions[model] = dfsave
             total += n
-
-        # write to shelve
-        if not filename is None:
-            d = shelve.open(filename)
-            if not d:
-                d.update(self.results)
-            else:
-                for model in self.models.available:
-                    d[model] = dbms.udpate(d[model],self.results[model],self.identifiers)
-            d.close()
 
     def _wrap(self,bundle):
         # the model wrapper will interpret the inputs of the interface.Model
@@ -170,50 +144,126 @@ class ModelTest(object):
         else:
             kargs = {k: entry[k.upper()] for k in vrs}
 
-        # Print if verbose
         if self.verbose:
-            fmt = "model={m:s}, SUBGROUP={sbgrp:s}, seq={seq:s}"
+            fmt = "model={m:s}, SUBGROUP={sbgrp:s}, seq={seq:s}..."
             print fmt.format(m=name,sbgrp=entry['SUBGROUP'],seq=entry['SEQUENCE'][:50])
 
         # Run model
-        # Using keyword argument unpacking to pass only requested args
-        output = self.models[name](**kargs)
+        return self.models[name](**kargs)
 
-        return output
+    def _update_database(self):
+
+        try:
+            handle = open(self.dbfilename,'r')
+            database = pickle.load(handle)
+            handle.close()
+            assert isinstance(database,pandas.DataFrame)
+        except:
+            raise Exception("Database filename: {} is not valid.".format(self.dbfilename))
+
+        for i in self.identifiers:
+            assert i in database.keys(), "{} isn't a database label.".format(i)
+
+        # dbms.get_indexes checks that filters are labels in database
+        # This code block code be removed if dbms.get_indexes gets no values
+        if "DATASET" in self.filters:
+            listed = database["DATASET"].cat.categories
+            unlisted = [x for x in self.filters["DATASET"] if x not in listed]
+            if unlisted:
+                error = "These datasets are unlisted: " + ", ".join(unlisted)
+                raise ValueError(error)
+
+        # Use filters specified by user on database
+        if self.filters:
+            database = dbms.filter(database,self.filters,False)
+        self.database = database
+
+    def calc_stats(self,filename=None):
+        
+        # assert that model predictions are available
+        # run statistics calculations for only datasets that have been calculated?
+
+        for m in self.models.available:
+            df = self.predictions[m]
+            allError = np.inf*np.ones(len(df))
+            entries = []
+            for subgroup in df["SUBGROUP"].unique():
+                indx = df["SUBGROUP"] == subgroup
+                x = np.array(df[self.models[m].x][indx])
+                y = np.array(df[self.models[m].y][indx])
+                data,yError = stats.linear_complete(x,y,self.models[m].yScale,slope=self.models[m].a1)
+                data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
+                                                                          positions=df["STARTPOS"][indx])
+                data["SUBGROUP"] = subgroup
+                entries.append(data)
+
+                # Add yError to model predictions
+                allError[indx] = yError
+
+            self.statistics[m] = pandas.DataFrame(entries)
+            self.predictions[m]['yError'] = pandas.Series(allError, index=df.index)
+
+        # write statistics to shelve if filename given
+        if not filename is None:
+            pass
+    
+    def to_shelve(self,filename):
+        
+        if not filename is None:
+            d = shelve.open(filename)
+            if not d:
+                d.update(self.predictions)
+            else:
+                for model in self.models.available:
+                    d[model] = dbms.udpate(d[model],self.predictions[model],self.identifiers)
+            d.close()
+
+    def to_excel(self,filename,predictColumns=[],statsColumns=[],models=[]):
+        assert isinstance(filename,str), "Filename provided, {}, for export() needs to be a string.".format(filename)
+        if not models:
+            models = self.predictions.keys()
+        else:
+            for m in models:
+                assert m in self.predictions.keys(), "Model {} was not tested.".format(m)
+        if filename[-4:] == ".xlsx":
+            fn = filename
+        else:
+            fn = filename + ".xlsx"
+        writer = pandas.ExcelWriter(fn)
+        if not predictColumns:
+            predictColumns = None
+        if not statsColumns:
+            statsColumns = None
+        for model in models:
+            self.predictions[model].to_excel(writer,sheet_name=model,columns=predictColumns)
+        for model in models:
+            self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
+        writer.save()
+
+    def to_csv(self):
+        pass
 
     def add_datasets(self,datasets):
         self.datasets = list(set(self.datasets+datasets))
+        self._update_database()
 
     def remove_datasets(self,datasets):
         self.datasets = [ds for ds in self.datasets[:] if ds not in datasets]
+        self._update_database()
 
-    def add_filters(self,filters):
+    def add_filters(self,filters={}):
         self.filters.update(filters)
+
+    def remove_filters(sef,filters=[]):
+        for key in filters:
+            self.filters.pop(key,None)
+        self._update_database()
 
     def add_model(self,alias,model,args,kargs):
         self.models.add(alias, model, args, kargs)
 
     def remove_model(self,alias):
         self.models.remove(alias)
-
-    def calcstats(self):
-        pass
-
-    def compare2models(self):
-        pass
-
-    def propertyerror(self):
-        pass
-
-    def export(self):
-        pass
-
-    def export2mat(self):
-        '''Export data to mat file store in table format
-        (we use MATLAB for plotting figures)'''
-        
-        # scipy.io.savemat()
-        pass
 
 
 if __name__ == "__main__":

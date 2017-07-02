@@ -54,17 +54,28 @@ def get_indexes(database,kargs,ordered,allqueries=False):
         # Can probably be written using pandas functionalities like query()
         indexes = []
         for valuetup in zip(kargs.itervalues()):
-            boolarray = np.all([df[keylist[i]]==valuetup[i] for i in range(len(valuetup))],axis=1)
+            boolarray = np.all([database[keylist[i]]==valuetup[i] for i in range(len(valuetup))],axis=1)
+            
+            for i,x in enumerate(boolarray):
+                if x:
+                    print i
             indx = [i for i,x in enumerate(boolarray) if x]
-            print indx
+            # print indx
             if not indx: indexes.append(None)
             else:        indexes += indx
     else:
         indexes = database[kargs.keys()].isin(kargs).all(1)
     if not allqueries:
         indexes = [indx for indx in indexes[:] if not indx is None]
+    # print sum(indexes)
     return indexes
 
+def to_dict_list(database):
+    '''Convert pandas dataframe to list of dictionaries, where each entry (row)
+    is a dictionary with the dataframe labels as keys (sorted by index).'''
+    db_as_dict = database.T.to_dict()
+    indxs = sorted(db_as_dict.keys())
+    return [db_as_dict[i] for i in indxs]
 
 #=== DEPRECATED ===#
 

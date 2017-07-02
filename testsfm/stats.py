@@ -10,7 +10,6 @@ import re
 import numpy as np
 import sklearn
 import scipy
-from scipy.optimize import minimize
 
 def correlation(x,y,name="Pearson"):
     # Linear or rank correlation
@@ -91,18 +90,12 @@ def fit_linear_model(x,y,slope=None):
 
     assert len(x)==len(y), ("Arrays x & Y must be equal length to fit "
                             "linear regression model.")
-
     if slope == None:
         (m,b) = scipy.polyfit(x,y,deg=1)
-
     else:
         LSQ = lambda b: np.sum( (y-(slope*x+b))**2.0 )
-        res = minimize(LSQ,x0=1,bounds=None)
-        (m,b) = (slope,np.exp(res.x[0]))
-
-    # calculate significance of linear regression
-    # ANOVA()
-    
+        res = scipy.optimize.minimize(LSQ,x0=1,bounds=None)
+        (m,b) = (slope,res.x[0])
     return (m,b)
 
 def ANOVA(X,y,coeffs):
@@ -153,23 +146,26 @@ def empirical_cdf(data,bins,rangemin=None,rangemax=None):
     Returns:
         ecdf (array) = empirical cumulative distribution function
         edges (array) = edges used during binning of histogram'''
+    
+    if isinstance(bins,np.ndarray):
+        edges = bins
+    else:        
+        message = "bins must either be an int or a list corresponding to the edges"
+        assert any(isinstance(bins,t) for t in [int,list]), message
 
-    err = "bins must either be an int or a list corresponding to the edges"
-    assert any(isinstance(bins,t) for t in [int,list]), err
+        if isinstance(bins,int):
+            assert bins > 1, "number of bins must be greater than 1."
+            assert rangemin < rangemax, "rangemin must be less than rangemax"
+            assert rangemin is not None and rangemax is not None, ("rangemin and "
+                "rangemax must be specified if bins is an integer.")
 
-    if isinstance(bins,int):
-        assert bins > 1, "number of bins must be greater than 1."
-        assert rangemin < rangemax, "rangemin must be less than rangemax"
-        assert rangemin is not None and rangemax is not None, ("rangemin and "
-            "rangemax must be specified if bins is an integer.")
+            edges = np.linspace(rangemin,rangemax,bins+1)
 
-        edges = np.linspace(rangemin,rangemax,bins+1)
-
-    elif isinstance(bins,list):
-        edges = np.array(bins)
-
+        elif isinstance(bins,list):
+            edges = np.array(bins)
+    
     h = np.histogram(data,edges)
-    ecdf = np.cumsum(h)/len(data)
+    ecdf = np.cumsum(h[0])/len(data)
 
     return ecdf,edges
 
@@ -317,7 +313,7 @@ def sequence_entropy(sequences,align="left",positions=None):
 
     Inputs:
         sequences (list) = sequences in a list
-        align (string)   = "left"/"right"/"positions"
+        align (string)   = "left"/"right"
                            "positions" indicates to use positions for alignment
         positions (list) = list of integers to do alignment
                             (e.g. start codon positions)
@@ -330,7 +326,7 @@ def sequence_entropy(sequences,align="left",positions=None):
     if any([exp.match(seq) is None for seq in sequences]):
         raise ValueError("Invalid letters found in sequences. Only ATGCU accepted.")
 
-    maxseqlen = max([len(seq) for seq in sequence_list])
+    maxseqlen = max([len(seq) for seq in sequences])
     samelen   = all([len(sequences[0])==len(seq) for seq in sequences[1:]])
 
     if   align == "left" and not samelen:
@@ -341,20 +337,16 @@ def sequence_entropy(sequences,align="left",positions=None):
         # align sequences to the right by buffering left with Xs
         sequences = ["X"*(maxseqlen-len(seq))+seq for seq in sequences[:]]
 
-    elif align == "positions":
+    elif not positions is None:
         # align sequences at alignment_positions and buffer both ends with Xs
-
-        if positions == None:
-            raise Exception("Provide positions if align=='positions'")
-
         lefts     = [len(seq[0:pos]) for seq,pos in zip(sequences,positions)]
         rights    = [len(seq[pos:]) for seq,pos in zip(sequences,positions)]
         maxleft   = max(lefts)
         maxright  = max(rights)
         sequences = ["X"*(maxleft-L)+seq+"X"*(maxright-R) for L,seq,R in zip(lefts,sequences[:],rights)]
-    
+        
     else:
-        raise ValueError("align cannot be {}. Please use 'left','right',or'positions'".format(align))
+        raise ValueError("align cannot be {}. Please use 'left','right',or positions".format(align))
 
     # Code test
     assert all(len(sequences[0])==len(seq) for seq in sequences[1:])
@@ -372,9 +364,70 @@ def sequence_entropy(sequences,align="left",positions=None):
 
     # calculate Shannon entropy at each position and total Shannon entropy (hseq)
     S = [entropy(pk,base=2) for pk in pkList]
-    hseq = sum(S)
+    Hseq = sum(S)
 
-    return hseq,S
+    return Hseq,S
+
+def linear_complete(xVals,yVals,yScale='linear',slope=None):
+
+    # Useful lambda functions
+    calc_x = lambda a0,a1,y: (y-a0)/a1
+    calc_y = lambda a0,a1,x: a1*x+a0
+
+    if yScale == 'log10':    yVals = np.log10(yVals)
+    elif yScale == 'ln':     yVals = np.log(yVals)
+    elif yScale == 'linear': pass
+    else: raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
+    
+    # determine outliers with initial fit
+    (a1,a0) = fit_linear_model(xVals,yVals,slope=slope)
+    app_xVals = calc_x(a0,a1,yVals)
+    abs_delta_x = np.absolute(xVals - app_xVals)
+    outliers = find_outliers(abs_delta_x)
+    keepers = np.invert(outliers)
+
+    # reapply fit with trimmed dataset & calculate error
+    xVals1 = xVals[keepers]
+    yVals1 = yVals[keepers]
+    (a1,a0) = fit_linear_model(xVals1,yVals1,slope=slope)
+    app_xVals = calc_x(a0,a1,yVals)
+    y_predicted = calc_y(a0,a1,xVals)
+    
+    if yScale == 'log10': yError = 10**(yVals)/10**(y_predicted)
+    elif yScale == 'ln':  yError = np.exp(yVals)/np.exp(y_predicted)
+    else:                 yError = yVals/y_predicted
+
+    # Calculate Pearson/Spearman correlation coefficients
+    (R,Pearson_p) = correlation(xVals,app_xVals)
+    (rho,Spearman_p) = correlation(xVals,app_xVals)
+
+    # Calculate one-sided model error cdfs
+    yError1 = list(yError)
+    indx = yError1 < 1
+    yError1[indx] = 1/yError1[indx]
+    bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
+    onesided_cdf,_ = empirical_cdf(yError1,bins)
+
+    # Calculate Kullback-Leibler divergence
+    (NKLdiv,KLdiv,KLdivmax) = normKLdiv(yError,b=4)
+
+    results = {
+    "Pearson R-squared": R**2.0,
+    "Pearson p": Pearson_p,
+    "Spearman R-squared": rho**2.0,
+    "Spearman p": Spearman_p,
+    "N-outliers": np.sum(outliers),
+    "slope": a1,
+    "intercept": a0,
+    "2-fold Error": onesided_cdf[1],
+    "5-fold Error": onesided_cdf[4],
+    "10-fold Error": onesided_cdf[9],
+    "Normalized KL-divergence": NKLdiv,
+    "KL-divergence": KLdiv,
+    "Max KL-divergence": KLdivmax
+    }
+
+    return results,yError
 
 if __name__ == "__main__":
     pass
