@@ -15,8 +15,9 @@ Python packages used are listed below. You can install the first three packages 
 [ViennaRNA](https://www.tbi.univie.ac.at/RNA/) - A C code library for the prediction and comparison of RNA secondary structures. ViennaRNA is wrapped with /models/PyVRNA.py for use in modeling and machine learning analysis.
 
 ### Installing
-Install with the following command:
+Install with the following:
 ```
+git clone https://github.com/reisalex/test-sfm
 sudo python setup.py install
 ```
 The model test system can then be imported by:
@@ -25,9 +26,8 @@ import testsfm
 ```
 
 ### Usage
-If you would like to use the provided genetic system database, the best way is to clone the complete repository, navigate to /testsfm, and run the datbase initialization module (initdb.py). In Linux:
+If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the datbase initialization module (initdb.py). In Linux:
 ```
-git clone https://github.com/reisalex/test-sfm
 cd /testsfm
 python initdb.py
 ```
@@ -43,4 +43,5 @@ If you use test-sfm, please cite:
 Alexander C. Reis, and Howard M. Salis
 An automated model test system for systematic development and
 improvement of gene expression models, In Preparation (2017).
+t clone https://github.com/reisalex/test-sfm
 
