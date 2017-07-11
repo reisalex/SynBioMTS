@@ -34,7 +34,11 @@ python initdb.py
 
 See /examples for usage. 
 
-Please cite:
+
+## Acknowledgements
+Thanks to Howard M Salis (Penn State), Iman Farasat (Merck), Amin Espah Borujeni (MIT), Tian Tian (JBEI), Daniel Goodman (Harvard), Sri Kosuri (UCLA), Robert Egbert (Berkeley), Mark Mimmee (MIT), and Heather Beck (Vienna) for publishing/providing high quality characterization data. A special thanks to Daniel Goodman for discussion on Flow-seq and for providing additional information on the 2013 Flow-seq datasets.
+
+If you use test-sfm, please cite:
 
 Alexander C. Reis, and Howard M. Salis
 An automated model test system for systematic development and
