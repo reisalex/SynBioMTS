@@ -18,6 +18,7 @@ Python packages used are listed below. You can install the first three packages 
 Install with the following:
 ```
 git clone https://github.com/reisalex/test-sfm
+cd test-sfm
 sudo python setup.py install
 ```
 The model test system can then be imported by:
