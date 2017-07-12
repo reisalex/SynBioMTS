@@ -27,7 +27,7 @@ import testsfm
 ```
 
 ### Usage
-If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the datbase initialization module (initdb.py). In Linux:
+If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the datbase initialization module (initdb.py):
 ```
 cd /testsfm
 python initdb.py
@@ -102,10 +102,39 @@ If you simply want to run model predictions, you can use `predict` instead of `r
 testsystem.predict()
 ```
 
+See /examples for more detailed examples.
+
 ### Statistics
+By default, the model test system will run statistics assuming the model predictor and the system function share a linear relationship. Specifically, `analyze.statistics()` calls a custom function `linear_complete` from the stats module to compute the following:
+* Fitted slope and y-intercept with outliers removed (via MAD method)
+* Relative model error (Apparent Value/Predicted Value)
+* Pearson & Spearman correlation coefficients
+* One-sided model error cummulative distribution function
+* Kullback-Leibler divergence
+
+If you want to run futher statistics, you can import the stats module:
+```
+from testsfm import stats
+```
+You can always add additional stats functions as needed.
 
 ### Exporting
-See /examples for more use cases. 
+Export to Excel is as simple as:
+```
+test.to_excel('filename')
+```
+By default pandas exports with the labels (columns) alphabetized. The model test system overrides the default export if you specify the labels. See /examples/labels for the ones I use:
+```
+test.run()
+
+with open("labels/labels1.txt","r") as f:
+    predictLabels = [x.strip('\n') for x in f.readlines()]
+
+with open("labels/labels_stats.txt","r") as f:
+    statsLabels = [x.strip('\n') for x in f.readlines()]
+
+test.to_excel('Beck',predictLabels,statsLabels) 
+```
 
 ## Acknowledgements
 
