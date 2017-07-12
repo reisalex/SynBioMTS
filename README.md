@@ -109,18 +109,18 @@ if __name__ == "__main__":
 	
     models = testsfm.interface.Container()
 	
-	# iterate over possible optimal_spacing values between 0 and 15
-	# add each model to models with a custom name and defined optimal_spacing of value s
-	allmodels = []
-	for s in range(0,16):
-		name = "RBSCalcv2-s={}.format(s)
-    	models.add(alias=name,model=RBSCalcv2,optimal_spacing=s)
-		allmodels.append(name)
+    # iterate over possible optimal_spacing values between 0 and 15
+    # add each model to models with a custom name and defined optimal_spacing of value s
+    allmodels = []
+    for s in range(0,16):
+        name = "RBSCalcv2-s={}.format(s)
+        models.add(alias=name,model=RBSCalcv2,optimal_spacing=s)
+        allmodels.append(name)
 	
-	# setform works on a list of models, in this case all of them
+    # setform works on a list of models, in this case all of them
     models.setform(allmodels,x='dG_total',y='PROT.MEAN',yScale='ln',a1=-0.45)
 	
-	testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db')
+    testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db')
     testsystem.run()
 ```
 
