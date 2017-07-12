@@ -108,12 +108,9 @@ testsystem.predict()
 See /examples for more use cases. 
 
 ## Acknowledgements
-```
-cd /testsfm
-python initdb.py
-```
 
-To use the model test system, you have to do the following:
-1. Wrap the model with a Python function.
-2. Create a models `Container` object and pass the wrapped functions with the `add` method.
-3. Specify the functional form between the model predictor and the system function with the `setform` method.
+Thanks to Howard M Salis (Penn State), Iman Farasat (Merck), Amin Espah Borujeni (MIT), Tian Tian (JBEI), Daniel Goodman (Harvard), Sri Kosuri (UCLA), Robert Egbert (Berkeley), Mark Mimmee (MIT), and Heather Beck (Vienna) for publishing/providing high quality characterization data. A special thanks to Daniel Goodman for discussion on Flow-seq and for providing additional information on the 2013 Flow-seq datasets.
+
+If you use test-sfm, please cite:
+
+Alexander C. Reis, and Howard M. Salis An automated model test system for systematic development and improvement of gene expression models, In Preparation (2017).
