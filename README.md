@@ -16,7 +16,7 @@ Python packages used are listed below. You can install the first three packages 
 
 ### Installing
 Install with the following:
-```python
+```
 git clone https://github.com/reisalex/test-sfm
 cd test-sfm
 sudo python setup.py install
@@ -28,7 +28,7 @@ import testsfm
 
 ### Usage
 If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the datbase initialization module (initdb.py):
-```python
+```
 cd /testsfm
 python initdb.py
 ```
