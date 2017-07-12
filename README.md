@@ -16,19 +16,19 @@ Python packages used are listed below. You can install the first three packages 
 
 ### Installing
 Install with the following:
-```
+```python
 git clone https://github.com/reisalex/test-sfm
 cd test-sfm
 sudo python setup.py install
 ```
 The model test system can then be imported by:
-```
+```python
 import testsfm
 ```
 
 ### Usage
 If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the datbase initialization module (initdb.py):
-```
+```python
 cd /testsfm
 python initdb.py
 ```
@@ -40,7 +40,7 @@ To use the model test system, you have to do the following:
 4. Create a `ModelTest` object and pass the models Container.
 5. Run model calculations and statistics with `run`.
 
-```
+```python
 import testsfm
 
 # Wrap the model with a function
@@ -85,20 +85,18 @@ if __name__ == "__main__":
 ```
 
 You can specify filters to run predictions on a subset of genetic systems with shared properties:
-```
-filters = { 'ORGANISM': ['Escherichia coli'],
-            ''DATASET': ['Beck_PLoS_2016']
-}
+```python
+filters = { 'ORGANISM': ['Escherichia coli'], 'DATASET': ['Beck_PLoS_2016','Salis_NBT_2009']}
 testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db',filters)
 ```
 
 You can specify the number of processes to force single process model calculations. The model test system uses the number of available CPUs by default.
-```
+```python
 testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db',nprocesses=1)
 ```
 
 If you simply want to run model predictions, you can use `predict` instead of `run` which includes statistics:
-```
+```python
 testsystem.predict()
 ```
 
@@ -113,18 +111,18 @@ By default, the model test system will run statistics assuming the model predict
 * Kullback-Leibler divergence
 
 If you want to run futher statistics, you can import the stats module:
-```
+```python
 from testsfm import stats
 ```
 You can always add additional stats functions as needed.
 
 ### Exporting
 Export to Excel is as simple as:
-```
+```python
 test.to_excel('filename')
 ```
 By default pandas exports with the labels (columns) alphabetized. The model test system overrides the default export if you specify the labels. See /examples/labels for the ones I use:
-```
+```python
 test.run()
 
 with open("labels/labels1.txt","r") as f:
