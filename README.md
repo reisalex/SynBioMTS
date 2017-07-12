@@ -91,7 +91,7 @@ def RBSCalcv2(sequence,temperature,optimal_spacing):
     rRNA = 'ACCTCCTTA'
     model = RBS_Calculator_v2.RBS_Calculator(mRNA=sequence,rRNA=rRNA)
     model.temp = temperature
-	model.optimal_spacing = optimal_spacing
+    model.optimal_spacing = optimal_spacing
     model.run()
     RBS = model.output() # simplified for the example
 
