@@ -113,7 +113,7 @@ if __name__ == "__main__":
     models.setform(["RBSCalc_v2_1"], x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
     # define database filters
-    filters = { "DATASET": ['Egbert_Spacers_PNAS_2012'] }
+    filters = { "DATASET": ['Egbert_PNAS_2012'] }
 
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'

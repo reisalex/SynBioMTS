@@ -314,7 +314,7 @@ def add_dataset(db,datasets):
     '''Robert G Egbert and Eric Klavins
     Fine-tuning gene networks using simple sequence repeats
     PNAS, 109: 42, 16817-16822, 2012'''
-    paper = 'Egbert_Spacers_PNAS_2012'
+    paper = 'Egbert_PNAS_2012'
 
     if paper in datasets:
         path = '../datasets/{}.xls'.format(paper)
@@ -696,7 +696,7 @@ if __name__ == "__main__":
                 'Tian_NAR_2015',            # TranslationCoupling
                 'Mimee_Cell_Sys_2015',      # Bthetaiotaomicron
                 'Bonde_NatMethods_IC_2016', # EMOPEC
-                'Egbert_Spacers_PNAS_2012', # SpacerComposition
+                'Egbert_PNAS_2012',         # SpacerComposition
                 'Hecht_NAR_2017',           # HechtStartCodons
                 'Beck_PLoS_2016',           # Beck Leaderless mRNA
                 'Kosuri_PNAS_2013',         # Kosuri
