@@ -74,6 +74,8 @@ class PyVRNA(object):
         assert 0 <= dangles <= 2 and isinstance(dangles, int), 'dangles must be one of the three integers: 0 (none), 1 (some), or 2 (all).'
         assert isinstance(gquad, bool),                        'gquad must be a boolean value.'
         assert parameter_file in self.parameter_files,         ''.join(['parameter file must be ', " or ".join(self.parameter_files), '.'])
+        if parameter_file + ".par" in self.parameter_files:
+            parameter_file += ".par"
         assert isinstance(test_inputs, bool),                  'test_inputs must be a boolean value.'
         
         # Setup model default settings variables
@@ -117,9 +119,7 @@ class PyVRNA(object):
         self.PyVRNA_fold_result         = namedtuple('PyVRNA_fold_result',     'structure energy')
         self.PyVRNA_centroid_result     = namedtuple('PyVRNA_centroid_result', 'structure energy distance')
         self.PyVRNA_ensemble_result     = namedtuple('PyVRNA_ensemble_result', 'structure energy')
-        self.PyVRNA_eval_result         = namedtuple('PyVRNA_eval_result',     'energy')
-        self.PyVRNA_slf_result          = namedtuple('PyVRNA_slf_result',      'length bpx bpy pkx pky gquad')
-        self.PyVRNA_vienna_result       = namedtuple('PyVRNA_vienna_result',   'structure')
+        self.PyVRNA_bp_result           = namedtuple('PyVRNA_bp_result',      'length bpx bpy pkx pky gquad')
 
     def _test_sequences(self, sequence_list, func_name):
         """
@@ -197,11 +197,11 @@ class PyVRNA(object):
         assert all(isinstance(dG,float) for dG in dG_ligands), "Make sure dG_ligand values are floats in kcal/mol"
         self._test_non_sequences(aptamer_constraints,aptamers,'RNAfold','constraint')
 
-    def _test_slf_tuple(self, length, bpx, bpy, pkx, pky, gquad, func_name):
+    def _test_bp_tuple(self, length, bpx, bpy, pkx, pky, gquad, func_name):
         """
-        Tests if all inputs for a slf_tuple are valid.
+        Tests if all inputs for a bp_tuple are valid.
 
-        Usage: energy_model._test_slf_tuple(slf_tuple.bpx, slf_tuple.bpy, slf_tuple.pkx, slf_tuple.pky, slf_tuple.gquad, func_name=string) # Validates bpx/bpy, pkx/pky and gquad in func_name
+        Usage: energy_model._test_bp_tuple(bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky, bp_tuple.gquad, func_name=string) # Validates bpx/bpy, pkx/pky and gquad in func_name
         """
         assert type(length) == int,                             ''.join(['in ', func_name, ': length must be an integer.'])
         assert length >= max([len(bpx), len(pkx), len(gquad)]), ''.join(['in ', func_name, ': length must be greater than or equal to the length of bpx/bpy, pkx/pky and quad lists.'])
@@ -319,9 +319,7 @@ class PyVRNA(object):
         """
         Computes the minimum free energy of a given structure and its corresponding sequence or duplex.
 
-        Usage: eval_result = energy_model.RNAeval(sequences, structures)        # Executes RNAeval
-               eval_result.energy                                                                          # Retrieves the evaluated energy
-               eval_energy = energy_model.RNAeval(sequences, structures).energy # Executes RNAeval and directly retrieves the energy
+        Usage: energy = energy_model.RNAeval(sequences, structures)        # Executes RNAeval
         """
         # Test if sequences and structures are valid
         if self.test_inputs:
@@ -329,7 +327,7 @@ class PyVRNA(object):
             self._test_non_sequences(non_sequence_list=structures, sequence_list=sequences, func_name='RNAeval', test_for='structure')
 
         # Return the energy (chained setup of ViennaRNA library object and call to eval_structure function)
-        return self.PyVRNA_eval_result(energy=RNA.fold_compound("&".join(sequences), self.settings).eval_structure("".join(structures)) + self.DuplexEnergyAdjustment(sequences))
+        return RNA.fold_compound("&".join(sequences), self.settings).eval_structure("".join(structures)) + self.DuplexEnergyAdjustment(sequences)
 
     def RNAfold(self, sequence, constraint=None, aptamers=[], aptamer_constraints=[], dG_ligands=[]):
         """
@@ -376,7 +374,7 @@ class PyVRNA(object):
 
         Usage: subopt_list = energy_model.RNAsubopt(sequences, constraints, delta_energy) # Executes RNAsubopt
                subopt_list[0].structure                                                                               # Retrieves 0th suboptimal structure
-               subopt_list[10].energy                                                                                 # Retrieves mfe of 10th suboptimal structure
+               subopt_list[0].energy                                                                                 # Retrieves mfe of 10th suboptimal structure
                subopt_energy_list = [solution.energy for solution in subopt_list]                                     # Filters out mfe of every suboptimal structure
         """
         # Test if sequences, structures and constraints are valid
@@ -405,43 +403,42 @@ class PyVRNA(object):
         # Return the fold structure and energy of all suboptimal structures
         return subopt_list
 
-    def GenerateSLFTuple(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def create_bp_tuple(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
-        Returns a customized slf_tuple from input bpx, bpy, pkx, pky and gquad lists.
+        Returns a customized bp_tuple from input bpx, bpy, pkx, pky and gquad lists.
 
-        NOTE:  SLF is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
-               This function can be used for involution with ViennaToSLF, meaning ViennaToSLF(SLFToVienna(slf_tuple)) = slf_tuple.
+        NOTE:  bp_tuple is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
 
-        Usage: custom_slf_tuple = energy_model.GenerateSLFTuple(bpx=some_list, bpy=some_list) # Executes GenerateSLFTuple and returns the specified slf_tuple
+        Usage: custom_bp_tuple = energy_model.create_bp_tuple(bpx=some_list, bpy=some_list) # Executes create_bp_tuple and returns the specified bp_tuple
         """
         # Test if the inputs are valid
         if self.test_inputs:
-            self._test_slf_tuple(length=length, bpx=bpx, bpy=bpy, pkx=pkx, pky=pky, gquad=gquad, func_name='GenerateSLFTuple')
+            self._test_bp_tuple(length=length, bpx=bpx, bpy=bpy, pkx=pkx, pky=pky, gquad=gquad, func_name='create_bp_tuple')
         
-        # Create and return the customized slf_tuple
-        return self.PyVRNA_slf_result(length=length, bpx=list(bpx), bpy=list(bpy), pkx=list(pkx), pky=list(pky), gquad=list(gquad))
+        # Create and return the customized bp_tuple
+        return self.PyVRNA_bp_result (length=length, bpx=list(bpx), bpy=list(bpy), pkx=list(pkx), pky=list(pky), gquad=list(gquad))
 
-    def ViennaToSLF(self, vienna_string):
+    def vienna2bp(self, vienna_string):
         """
-        Converts the vienna_string (dot bracket string representing a mfe structure) to slf_tuple (SLF = Salis Lab Format).
+        Converts the vienna_string (dot bracket string representing a mfe structure) to bp_tuple.
 
-        NOTE:  SLF is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
-               This function can be used for involution with SLFToVienna, meaning SLFToVienna(ViennaToSLF(vienna_string)) = vienna_string.
+        NOTE:  bp_tuple is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
+               This function can be used for involution with bp2vienna, meaning bptuple2vienna(vienna2bp(vienna_string)) = vienna_string.
 
-        Usage: slf_tuple = energy_model.ViennaToSLF(vienna_string=some_result.structure) # Executes ViennaToSLF
-               slf_tuple.length                                                          # Retrieves the length of vienna_string
-               slf_tuple.bpx                                                             # Retrieves the base_pair_x_list
-               slf_tuple.bpy                                                             # Retrieves the base_pair_y_list
-               slf_tuple.pkx                                                             # Retrieves the pseudo_pair_x_list
-               slf_tuple.pky                                                             # Retrieves the pseudo_pair_y_list
-               slf_tuple.gquad                                                           # Retrieves the gquad_list
+        Usage: bp_tuple = energy_model.vienna2bp(vienna_string=some_result.structure) # Executes vienna2bp
+               bp_tuple.length                                                          # Retrieves the length of vienna_string
+               bp_tuple.bpx                                                             # Retrieves the base_pair_x_list
+               bp_tuple.bpy                                                             # Retrieves the base_pair_y_list
+               bp_tuple.pkx                                                             # Retrieves the pseudo_pair_x_list
+               bp_tuple.pky                                                             # Retrieves the pseudo_pair_y_list
+               bp_tuple.gquad                                                           # Retrieves the gquad_list
         """
         # Test if vienna_string has all valid characters
         if self.test_inputs:
-            assert set(vienna_string) <= set('.([+])'), 'in ViennaToSLF: vienna_string must be a string of .([+]) characters only.'
+            assert set(vienna_string) <= set('.([+])'), 'in vienna2bp: vienna_string must be a string of .([+]) characters only.'
 
-        # Setup data structures and variables for computing SLF     
-        slf_tuple          = self.GenerateSLFTuple(length=len(vienna_string))
+        # Setup data structures and variables for computing bp 
+        bp_tuple          = self.create_bp_tuple(length=len(vienna_string))
         bp_stack, pk_stack = [], []
         bp_dict, pk_dict   = OrderedDict(), OrderedDict()
         has_gquad          = False
@@ -454,11 +451,11 @@ class PyVRNA(object):
             if not char in ['x', '.']:
                 if   char == '(':
                     bp_stack.append(index+1)
-                    slf_tuple.bpx.append(index+1)
+                    bp_tuple.bpx.append(index+1)
                     bp_dict[index+1] = -1
                 elif char == '[':
                     pk_stack.append(index+1)                    
-                    slf_tuple.pkx.append(index+1)
+                    bp_tuple.pkx.append(index+1)
                     pk_dict[index+1] = -1
                 elif char == ')':
                     bp_dict[bp_stack.pop()] = index+1
@@ -468,9 +465,9 @@ class PyVRNA(object):
                     has_gquad = True
         else:
             for val in bp_dict.itervalues():
-                slf_tuple.bpy.append(val)
+                bp_tuple.bpy.append(val)
             for val in pk_dict.itervalues():
-                slf_tuple.pky.append(val)
+                bp_tuple.pky.append(val)
         
         # Extract all quadruplex indices in order
         while has_gquad and string_index < len(vienna_string):
@@ -491,49 +488,47 @@ class PyVRNA(object):
         else:
             if has_gquad:
                 for i in xrange(len(gquad_matrix[0])):
-                    slf_tuple.gquad.extend(zip(gquad_matrix[0][i], gquad_matrix[1][i], gquad_matrix[2][i], gquad_matrix[3][i]))
+                    bp_tuple.gquad.extend(zip(gquad_matrix[0][i], gquad_matrix[1][i], gquad_matrix[2][i], gquad_matrix[3][i]))
         
-        # Return SLF tuple
-        return slf_tuple
+        return bp_tuple
 
-    def GenerateSLFToVienna(self, length, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def bp2vienna(self, length, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
-        Creates a customized slf_tuple from input bpx, bpy, pkx, pky and gquad lists and returns the vienna_string encoded by it.
+        Creates a customized bp_tuple from input bpx, bpy, pkx, pky and gquad lists and returns the vienna_string encoded by it.
 
-        NOTE:  SLF is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
-               This function can be used for involution with ViennaToSLF, meaning ViennaToSLF(SLFToVienna(slf_tuple)) = slf_tuple.
+        NOTE:  bp_tuple is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
 
-        Usage: custom_vienna_string = energy_model.GenerateSLFToVienna(bpx=some_list, bpy=some_list) # Executes GenerateSLFToVienna and returns the vienna_string
+        Usage: custom_vienna_string = energy_model.bp2vienna(bpx=some_list, bpy=some_list) # Executes bp2vienna and returns the vienna_string
         """
-        return self.SLFToVienna(self.GenerateSLFTuple(length, bpx, bpy, pkx, pky, gquad))
+        return self.bptuple2vienna(self.create_bp_tuple(length, bpx, bpy, pkx, pky, gquad))
 
-    def SLFToVienna(self, slf_tuple):
+    def bptuple2vienna(self, bp_tuple):
         """
-        Converts an slf_tuple (SLF = Salis Lab Format) to vienna_string (dot bracket string representing a mfe structure).
+        Converts an bp_tuple to vienna_string (dot bracket string representing a mfe structure).
 
-        NOTE:  SLF is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
-               This function can be used for involution with ViennaToSLF, meaning ViennaToSLF(SLFToVienna(slf_tuple)) = slf_tuple.
+        NOTE:  bp_tuple is a tuple of (length, base_pair_x_list, base_pair_y_list, pseudo_pair_x_list, pseudo_pair_y_list, gquad_list).
+               This function can be used for involution with vienna2bp, meaning vienna2bp(bptuple2vienna(bp_tuple)) = bp_tuple.
 
-        Usage: vienna_string = energy_model.SLFToVienna(slf_tuple) # Executes SLFToVienna and retrieves the mfe structure
+        Usage: vienna_string = energy_model.bptuple2vienna(bp_tuple) # Executes bptuple2vienna and retrieves the mfe structure
         """
         # Test if vienna_string has all valid characters
         if self.test_inputs:
-            self._test_slf_tuple(length=slf_tuple.length, bpx=slf_tuple.bpx, bpy=slf_tuple.bpy, pkx=slf_tuple.pkx, pky=slf_tuple.pky, gquad=slf_tuple.gquad, func_name='SLFToVienna')
+            self._test_bp_tuple(length=bp_tuple.length, bpx=bp_tuple.bpx, bpy=bp_tuple.bpy, pkx=bp_tuple.pkx, pky=bp_tuple.pky, gquad=bp_tuple.gquad, func_name='bptuple2vienna')
 
         # Place all appropriate symbols in vienna_string_list
-        vienna_string_list = ['.'] * slf_tuple.length
-        for i, j in izip(slf_tuple.bpx, slf_tuple.bpy):
+        vienna_string_list = ['.'] * bp_tuple.length
+        for i, j in izip(bp_tuple.bpx, bp_tuple.bpy):
             if i >= 0 and j >= 0: vienna_string_list[i-1], vienna_string_list[j-1] = '(', ')'
             else                : break
-        for i, j in izip(slf_tuple.pkx, slf_tuple.pky):
+        for i, j in izip(bp_tuple.pkx, bp_tuple.pky):
             if i >= 0 and j >= 0: vienna_string_list[i-1], vienna_string_list[j-1] = '[', ']'
             else                : break
-        for i, j, k, l in chain(slf_tuple.gquad):
+        for i, j, k, l in chain(bp_tuple.gquad):
             if i >= 0 and j >= 0 and k >= 0 and l >= 0: vienna_string_list[i-1], vienna_string_list[j-1], vienna_string_list[k-1], vienna_string_list[l-1] = '+', '+', '+', '+'
             else                                      : break
         
         # Return the vienna_string from its list
-        return self.PyVRNA_vienna_result(structure="".join(vienna_string_list))
+        return "".join(vienna_string_list)
 
 # Legacy
 class ViennaRNA(dict):
@@ -570,26 +565,26 @@ class ViennaRNA(dict):
         structure, energy, distance = energy_model.RNAcentroid(sequence=self["sequences"][0])
 
         # Legacy: Parsing and storing output
-        slf_tuple = energy_model.ViennaToSLF(structure)
+        bp_tuple = energy_model.vienna2bp(structure)
         self["program"]                 = "Centroid"
-        self["totalnt"]                 = [slf_tuple.length]
+        self["totalnt"]                 = [bp_tuple.length]
         self["Centroid_energy"]         = [energy]
         self['Centroid_bracket_string'] = structure
-        self["Centroid_basepairing_x"]  = [slf_tuple.bpx]
-        self["Centroid_basepairing_y"]  = [slf_tuple.bpy]
+        self["Centroid_basepairing_x"]  = [bp_tuple.bpx]
+        self["Centroid_basepairing_y"]  = [bp_tuple.bpy]
 
     # Legacy
     def convert_bracket_to_numbered_pairs(self, bracket_string):
         # New: PyVRNA execution
-        slf_tuple = PyVRNA(test_inputs=False).ViennaToSLF(bracket_string)
-        return [[slf_tuple.length], slf_tuple.bpx, slf_tuple.bpy, slf_tuple.pkx, slf_tuple.pky]
+        bp_tuple = PyVRNA(test_inputs=False).vienna2bp(bracket_string)
+        return [[bp_tuple.length], bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky]
 
     # Legacy
     def convert_numbered_pairs_to_bracket(self, strands, bp_x, bp_y, PK_bp_x=[], PK_bp_y=[], Gquad_bp=[]):
         # New: PyVRNA execution
         energy_model = PyVRNA(test_inputs=False)
-        slf_tuple = energy_model.PyVRNA_slf_result(length=sum(strands), bpx=bp_x, bpy=bp_y, pkx=PK_bp_x, pky=PK_bp_y, gquad=Gquad_bp)
-        return energy_model.SLFToVienna(slf_tuple).structure
+        bp_tuple = energy_model.PyVRNA_bp_result (length=sum(strands), bpx=bp_x, bpy=bp_y, pkx=PK_bp_x, pky=PK_bp_y, gquad=Gquad_bp)
+        return energy_model.bptuple2vienna(bp_tuple)
 
     # Legacy
     def energy(self, strands, base_pairing_x, base_pairing_y, Temp=37.0, dangles="all"):
@@ -601,8 +596,8 @@ class ViennaRNA(dict):
 
         # New: PyVRNA execution
         energy_model = PyVRNA(temperature=Temp, dangles=self.dangles_dict[dangles], gquad=self["Gquad"], parameter_file=self["RNA_model_param"], test_inputs=False)
-        slf_tuple    = energy_model.PyVRNA_slf_result(length=sum(strands), bpx=base_pairing_x, bpy=base_pairing_y, pkx=[], pky=[], gquad=[])
-        energy       = energy_model.RNAeval(sequences, [energy_model.SLFToVienna(slf_tuple).structure]).energy
+        bp_tuple     = energy_model.PyVRNA_bp_result(length=sum(strands), bpx=base_pairing_x, bpy=base_pairing_y, pkx=[], pky=[], gquad=[])
+        energy       = energy_model.RNAeval(sequences, [energy_model.bptuple2vienna(bp_tuple)])
 
         # Legacy: Parsing and storing output
         self["program"]              = "energy"
@@ -628,13 +623,13 @@ class ViennaRNA(dict):
             raise ValueError("Three RNA strands are inputted. ViennaRNA does NOT return structure and energy for three sequences in RNA(co)fold.")
 
         # Legacy: Parsing and storing output
-        slf_tuple = energy_model.ViennaToSLF(structure)
+        bp_tuple = energy_model.vienna2bp(structure)
         self["program"]            = "mfe"
-        self["totalnt"]            = [slf_tuple.length]
+        self["totalnt"]            = [bp_tuple.length]
         self["mfe_energy"]         = [energy]
         self["mfe_bracket_string"] = structure
-        self["mfe_basepairing_x"]  = [slf_tuple.bpx]
-        self["mfe_basepairing_y"]  = [slf_tuple.bpy]
+        self["mfe_basepairing_x"]  = [bp_tuple.bpx]
+        self["mfe_basepairing_y"]  = [bp_tuple.bpy]
 
     # Legacy
     def subopt(self, strands, energy_gap, Temp=37.0, dangles="all", constraints=None, outputPS=False):
@@ -657,10 +652,10 @@ class ViennaRNA(dict):
         
         # Legacy: Parsing and storing output
         for structure, energy in results:
-            slf_tuple = energy_model.ViennaToSLF(structure)
+            bp_tuple = energy_model.vienna2bp(structure)
             self["subopt_energy"].append(energy)
-            self["subopt_basepairing_x"].append(slf_tuple.bpx)
-            self["subopt_basepairing_y"].append(slf_tuple.bpy)
+            self["subopt_basepairing_x"].append(bp_tuple.bpx)
+            self["subopt_basepairing_y"].append(bp_tuple.bpy)
         self["program"]           = "subopt"
         self["totalnt"]           = strands
         self["subopt_NumStructs"] = len(results)
@@ -812,13 +807,13 @@ def tests():
     print 'Testing RNAeval...',
     sequence     = 'CGACGUAGAUGCUAGCUGACUCGAUGC'
     energy_model = PyVRNA(dangles=0, gquad=False, parameter_file='rna_andronescu2007.par')
-    eval_result  = energy_model.RNAeval([sequence], ['(((.(.((.......))..))))....'])
-    assert float("{0:0.2f}".format(eval_result.energy)) == 2.15
+    energy  = energy_model.RNAeval([sequence], ['(((.(.((.......))..))))....'])
+    assert float("{0:0.2f}".format(energy)) == 2.15
     energy_model = None
     sequences    = ['CGCAGGGAUACCCGCG','GCGCCCAUAGGGACGC']
     energy_model = PyVRNA(dangles=2, gquad=False, parameter_file='rna_andronescu2007.par')
-    eval_result  = energy_model.RNAeval(sequences,['.((.(((...))))).','((((((...))).)))'])
-    assert float("{0:0.2f}".format(eval_result.energy)) == -12.73
+    energy  = energy_model.RNAeval(sequences,['.((.(((...))))).','((((((...))).)))'])
+    assert float("{0:0.2f}".format(energy)) == -12.73
 
     energy_model = None
     print 'everything works'
@@ -908,35 +903,35 @@ def tests():
     print 'everything works'
 
 
-    # Tests for ViennaToSLF and SLFToVienna
-    print 'Testing ViennaToSLF and SLFToVienna...',
+    # Tests for vienna2bp and bp2vienna
+    print 'Testing vienna2bp and bp2vienna...',
     energy_model  = PyVRNA()
     vienna_string = '..++++....++++....++++....++++....++++....++++....++++....++++..'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '....(((...)))...'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '(((.((....)).)))'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '..[.((....)).]..+++..+++..+++..+++..'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '(((((((....++..++..++..++..)))))))'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '[[[[(((((((....)))))))..((((....))))]]]]'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     energy_model  = PyVRNA()
     vienna_string = '...((..((..))..((..))..))....((..((..))..(.)..))..'
-    assert energy_model.SLFToVienna(energy_model.ViennaToSLF(vienna_string)).structure == vienna_string
+    assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
     print 'everything works'
 
@@ -973,18 +968,18 @@ def legacy_tests():
     structure    = '(((.(.((.......))..))))....'
     energy_model = PyVRNA(dangles=0, gquad=False, parameter_file='rna_andronescu2007.par')
     vienna_model = ViennaRNA(Sequence_List=[sequence], material='rna_andronescu2007', Gquad=False)
-    slf_tuple    = energy_model.ViennaToSLF(structure)
-    vienna_model.energy(strands=[1], base_pairing_x=slf_tuple.bpx, base_pairing_y=slf_tuple.bpy, Temp=37.0, dangles="none")
-    assert float("{0:0.2f}".format(energy_model.RNAeval([sequence], [structure]).energy)) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == 2.15
+    bp_tuple    = energy_model.vienna2bp(structure)
+    vienna_model.energy(strands=[1], base_pairing_x=bp_tuple.bpx, base_pairing_y=bp_tuple.bpy, Temp=37.0, dangles="none")
+    assert float("{0:0.2f}".format(energy_model.RNAeval([sequence], [structure]))) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == 2.15
     energy_model = None
     vienna_model = None
     sequences    = ['CGCAGGGAUACCCGCG','GCGCCCAUAGGGACGC']
     structures  = ['.((.(((...))))).','((((((...))).)))']
     energy_model = PyVRNA()
     vienna_model = ViennaRNA(Sequence_List=sequences, material='rna_andronescu2007', Gquad=False)
-    slf_tuple    = energy_model.ViennaToSLF("".join(structures))
-    vienna_model.energy(strands=[0, 1], base_pairing_x=slf_tuple.bpx, base_pairing_y=slf_tuple.bpy, Temp=37.0, dangles="all")
-    assert float("{0:0.2f}".format(energy_model.RNAeval(sequences, structures).energy)) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == -12.73
+    bp_tuple    = energy_model.vienna2bp("".join(structures))
+    vienna_model.energy(strands=[0, 1], base_pairing_x=bp_tuple.bpx, base_pairing_y=bp_tuple.bpy, Temp=37.0, dangles="all")
+    assert float("{0:0.2f}".format(energy_model.RNAeval(sequences, structures))) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == -12.73
     energy_model = None
     vienna_model = None
     print 'everything works'

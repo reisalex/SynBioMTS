@@ -92,6 +92,10 @@ class Container(dict):
             self[name].a1 = float(a1) if isinstance(a1,(int,float)) else None
             # self.form[name] = {'x': x, 'y': y, 'yScale': yScale,  'a1': float(a1)}
 
+    def changeName(self,oldName,newName):
+        self[newName] = self.pop(oldName)
+        self.available = sorted(self.keys())
+
     def __add__(self,another):
         assert another.__name__ == "Models", "Must add two Models to combine."
         for name,pmodel in another.iteritems():

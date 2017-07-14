@@ -62,7 +62,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos):
     rRNA = get_rRNA(organism)
     model = RBS_Calculator_v2_1.RBS_Calculator(sequence,start_range,rRNA)
     model.temp = temp
-    
+
     model.run()
     output = model.output()
     (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
@@ -97,7 +97,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos):
     # Save dot-parentheses structure for initial state mRNA structure
     bpx = RBS.initial_structure['bp_x']
     bpy = RBS.initial_structure['bp_y']
-    viennafld = RNAEnergyModel.GenerateSLFToVienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy).structure
+    viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
     results['initial_structure'] = viennafld
 
     warning_dict = _calc_warning_flags(RBS)
@@ -113,20 +113,32 @@ if __name__ == "__main__":
     models.setform(["RBSCalc_v2_1"], x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
     # define database filters
-    filters = { "DATASET": ['Egbert_Spacers_PNAS_2012']
-                }
+    filters = { "DATASET": ['Egbert_Spacers_PNAS_2012'] }
 
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
 
     # customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
     customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
-    customtest.run('model_calcs_Egbert.db','stats_Egbert.db')
+    customtest.run()
 
-    with open("labels/labels1.txt","r") as f:
-        predictLabels = [x.strip('\n') for x in f.readlines()]
+    # Let's explore model error!
+    # We noticed that poly-A, poly-U, poly-AU, and poly-AC had different slopes
+    # Hypothesis: dG_stacking of the spacer sequence is a free energy
+    # that the ribosome must overcome (initial state)
+    # But we can't predict dG_stacking easily, so we can use this dataset
+    # to estimate dG_stacking(NN)
 
-    with open("labels/labels_stats.txt","r") as f:
-        statsLabels = [x.strip('\n') for x in f.readlines()]
+    # Use scipy.optimize.minimize
+    import scipy.optimize as optimize
 
-    customtest.to_excel('Egbert_Output',predictLabels,statsLabels)
+    
+
+
+
+    # Write model predictions and statistics to Excel
+    # with open("labels/labels1.txt","r") as f:
+    #     predictLabels = [x.strip('\n') for x in f.readlines()]
+    # with open("labels/labels_stats.txt","r") as f:
+    #     statsLabels = [x.strip('\n') for x in f.readlines()]
+    # customtest.to_excel('Egbert_Output',predictLabels,statsLabels)

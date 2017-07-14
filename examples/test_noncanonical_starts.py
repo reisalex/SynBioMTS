@@ -59,6 +59,7 @@ def find_best_start(mRNA, start_pos, predictions):
 
 import RBS_Calculator_v2_1
 def RBSCalc_v2_1(sequence,organism,temp,startpos,start_energies):
+
     start_range = [0,startpos+1]
     rRNA = get_rRNA(organism)
     model = RBS_Calculator_v2_1.RBS_Calculator(sequence,start_range,rRNA)
@@ -101,7 +102,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos,start_energies):
     # Save dot-parentheses structure for initial state mRNA structure
     bpx = RBS.initial_structure['bp_x']
     bpy = RBS.initial_structure['bp_y']
-    viennafld = RNAEnergyModel.GenerateSLFToVienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy).structure
+    viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
     results['initial_structure'] = viennafld
 
     return results
@@ -197,8 +198,6 @@ if __name__ == "__main__":
 
     with open("labels/labels1.txt","r") as f:
         predictLabels = [x.strip('\n') for x in f.readlines()]
-
     with open("labels/labels_stats.txt","r") as f:
         statsLabels = [x.strip('\n') for x in f.readlines()]
-
     test.to_excel('Hecht_Output',predictLabels,statsLabels)

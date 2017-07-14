@@ -187,11 +187,18 @@ class ModelTest(object):
             df = self.predictions[m]
             allError = np.inf*np.ones(len(df))
             entries = []
+            allPredicted = np.array([])
+            yScale = self.models[m].yScale
+
             for subgroup in df["SUBGROUP"].unique():
+
+                # Extract subgroup data & predictions
                 indx = df["SUBGROUP"] == subgroup
                 x = np.array(df[self.models[m].x][indx])
                 y = np.array(df[self.models[m].y][indx])
-                data,yError = stats.linear_complete(x,y,self.models[m].yScale,slope=self.models[m].a1)
+
+                # Run statistics and information theory calcs
+                data,yError = stats.linear_complete(x,y,yScale,self.models[m].a1)
                 data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
                                                                           positions=df["STARTPOS"][indx])
                 data["SUBGROUP"] = subgroup
@@ -199,6 +206,23 @@ class ModelTest(object):
 
                 # Add yError to model predictions
                 allError[indx] = yError
+
+                # Calculate yPredicted based on linear model fit
+                yPredicted = data['slope']*x + data['intercept']
+                if yScale == 'ln':
+                    yPredicted = np.exp(yPredicted)
+                elif yScale == 'log10':
+                    yPredicted = np.power(10,yPredicted)
+                elif yScale == 'linear':
+                    pass
+                else:
+                    raise Exception('Bad yScale set for {}'.format(m))
+                allPredicted = np.concatenate((allPredicted,yPredicted))
+
+            # Calculate statistics for model {m} on all data
+            y = np.array(df[self.models[m].y])
+            data,_ = stats.linear_simple(allPredicted,y,yScale)
+            entries.append(data)
 
             self.statistics[m] = pandas.DataFrame(entries)
             self.predictions[m]['yError'] = pandas.Series(allError, index=df.index)
@@ -230,14 +254,12 @@ class ModelTest(object):
         else:
             fn = filename + ".xlsx"
         writer = pandas.ExcelWriter(fn)
-        if not predictColumns:
-            predictColumns = None
-        if not statsColumns:
-            statsColumns = None
-        for model in models:
-            self.predictions[model].to_excel(writer,sheet_name=model,columns=predictColumns)
-        for model in models:
-            self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
+        if predictColumns:
+            for model in models:
+                self.predictions[model].to_excel(writer,sheet_name=model,columns=predictColumns)
+        if statsColumns:        
+            for model in models:
+                self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
         writer.save()
 
     def to_csv(self):

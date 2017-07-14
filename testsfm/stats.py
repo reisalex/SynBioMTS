@@ -429,5 +429,52 @@ def linear_complete(xVals,yVals,yScale='linear',slope=None):
 
     return results,yError
 
+def linear_simple(xVals,yVals,yScale='linear'):
+
+    if yScale == 'log10':
+        xVals = np.log10(xVals)
+        yVals = np.log10(yVals)
+    elif yScale == 'ln':
+        xVals = np.log(xVals)
+        yVals = np.log(yVals)
+    elif yScale == 'linear':
+        pass
+    else:
+        raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
+
+    # Calculate Pearson/Spearman correlation coefficients
+    (R,Pearson_p) = correlation(xVals,yVals)
+    (rho,Spearman_p) = correlation(xVals,yVals)
+
+    # Calculate one-sided model error cdfs
+    yError = yVals/xVals
+    yError1 = list(yError)
+    indx = yError1 < 1
+    yError1[indx] = 1/yError1[indx]
+    bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
+    onesided_cdf,_ = empirical_cdf(yError1,bins)
+
+    # Calculate Kullback-Leibler divergence
+    (NKLdiv,KLdiv,KLdivmax) = normKLdiv(yError,b=4)
+    
+    # Calculate number of outliers
+    outliers = find_outliers(yError)
+
+    results = {
+    "Pearson R-squared": R**2.0,
+    "Pearson p": Pearson_p,
+    "Spearman R-squared": rho**2.0,
+    "Spearman p": Spearman_p,
+    "N-outliers": np.sum(outliers),
+    "2-fold Error": onesided_cdf[1],
+    "5-fold Error": onesided_cdf[4],
+    "10-fold Error": onesided_cdf[9],
+    "Normalized KL-divergence": NKLdiv,
+    "KL-divergence": KLdiv,
+    "Max KL-divergence": KLdivmax
+    }
+
+    return results,yError
+
 if __name__ == "__main__":
     pass

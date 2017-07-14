@@ -59,6 +59,12 @@ def find_best_start(mRNA, start_pos, predictions):
 
 import RBS_Calculator_v2_1
 def RBSCalc_v2_1(sequence,organism,temp,startpos):
+
+    # RBS Calculator seems to be getting held up on 5'UTRs >> 500 bp
+    # We'll skip for now - but need to go in later and try and fix the issue
+    if startpos > 500:
+        return {}
+
     start_range = [0,startpos+1]
     rRNA = get_rRNA(organism)
     model = RBS_Calculator_v2_1.RBS_Calculator(sequence,start_range,rRNA)
@@ -79,7 +85,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos):
     'used_mRNA_sequence' : RBS.sequence,
     'dG_UTR_fold' : RBS.dG_UTR_folding,
     'dG_SD_16S_hybrid' : RBS.dG_SD_hybridization,
-    'dG_after_footprint' : RBS.dG_after_footprint_folding,
+    'dG_after_footprint' : RBS.dG_after_footprint_folding
     'spacing_length' : RBS.spacing_length,
     'final_post_cutoff' : RBS.adaptive_post_cutoff,
     'binding_fragment' : RBS.optimum_hairpin_fragment,
@@ -98,7 +104,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos):
     # Save dot-parentheses structure for initial state mRNA structure
     bpx = RBS.initial_structure['bp_x']
     bpy = RBS.initial_structure['bp_y']
-    viennafld = RNAEnergyModel.GenerateSLFToVienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy).structure
+    viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
     results['initial_structure'] = viennafld
 
     return results
@@ -120,12 +126,10 @@ if __name__ == "__main__":
 
     # customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,nprocesses=1,verbose=True)
     test = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
-    test.run()
+    test.predict()
 
     with open("labels/labels1.txt","r") as f:
         predictLabels = [x.strip('\n') for x in f.readlines()]
-
     with open("labels/labels_stats.txt","r") as f:
         statsLabels = [x.strip('\n') for x in f.readlines()]
-
-    test.to_excel('Beck',predictLabels,statsLabels)
+    test.to_excel('Beck',predictLabels)
