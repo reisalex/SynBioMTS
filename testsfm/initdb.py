@@ -145,6 +145,39 @@ def add_dataset(db,datasets):
         db = db.append(df, ignore_index=True)
 
 
+    '''
+    Amin Espah Borujeni, Manish Kushwaha, and Howard M Salis
+    Reparameterizing the Biophysical Model of Translation Initiation inside Bacillus subtilis
+    Unpublished. Reported in Thesis of Amin Espah Borujeni Penn State University 2016'''
+    paper = 'EspahBorujeni_Bsubtilis_2016'
+
+    if paper in datasets:
+        path = '../datasets/{}.xls'.format(paper)
+        wb = xlrd.open_workbook(path,'r')
+        sheet = wb.sheet_by_index(0)
+
+        ds = {
+            "5pUTR"       : sheet.col_values(colx=1, start_rowx=1, end_rowx=48),
+            "CDS"         : sheet.col_values(colx=2, start_rowx=1, end_rowx=48),
+            "PROT.MEAN"   : sheet.col_values(colx=3, start_rowx=1, end_rowx=48),
+            "PROT.STD"    : sheet.col_values(colx=4, start_rowx=1, end_rowx=48),
+            "PROTEIN"     : "RFP",
+            "PLASMID"     : "pDG1661",
+            "PROMOTER.ID" : "pVeg",
+            "ORGANISM"    : "Bacillus subtilis subsp. subtilis str. 168",
+            "METHOD"      : "Individually Characterized",
+            "TEMP"        : 30.0,
+            "DATASET"     : paper
+        }
+
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
+
+        df = pd.DataFrame(ds)
+        db = db.append(df, ignore_index=True)
+
+        print df
+
     '''Howard M. Salis, Ethan A. Mirsky, & Christopher A. Voigt
     Automated design of synthetic ribosome binding sites to control protein expression
     Nature Biotechnology, 2009, Vol. 27, No. 10; doi: 10.1038/nbt.1568'''
@@ -691,6 +724,7 @@ if __name__ == "__main__":
                 'EspahBorujeni_NAR_2015',   # Riboswitch
                 'EspahBorujeni_JACS_2016',  # RibosomeDrafting
                 'EspahBorujeni_Footprint',  # Footprint
+                'EspahBorujeni_Bsubtilis_2016', # B. subtilis
                 'Salis_Nat_Biotech_2009',   # RBSCalculator
                 'Farasat_MSB_2014',         # dRBS
                 'Tian_NAR_2015',            # TranslationCoupling
@@ -705,7 +739,7 @@ if __name__ == "__main__":
 
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
-
+    print len(db)
     handle = open('../geneticsystems.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()
