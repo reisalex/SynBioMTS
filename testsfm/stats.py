@@ -429,13 +429,20 @@ def linear_complete(xVals,yVals,yScale='linear',slope=None):
 
     return results,yError
 
-def linear_simple(xVals,yVals,yScale='linear'):
+def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
+
+    if xScale == 'log10':
+        xVals = np.log10(xVals)
+    elif xScale == 'ln':
+        xVals = np.log(xVals)
+    elif xScale == 'linear':
+        pass
+    else:
+        raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))
 
     if yScale == 'log10':
-        xVals = np.log10(xVals)
         yVals = np.log10(yVals)
     elif yScale == 'ln':
-        xVals = np.log(xVals)
         yVals = np.log(yVals)
     elif yScale == 'linear':
         pass

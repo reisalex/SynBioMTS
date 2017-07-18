@@ -176,7 +176,6 @@ def add_dataset(db,datasets):
         df = pd.DataFrame(ds)
         db = db.append(df, ignore_index=True)
 
-        print df
 
     '''Howard M. Salis, Ethan A. Mirsky, & Christopher A. Voigt
     Automated design of synthetic ribosome binding sites to control protein expression
@@ -458,13 +457,13 @@ def add_dataset(db,datasets):
         sheet = wb.sheet_by_name('Sheet2')
 
         SalI = sheet.cell_value(43,2)
-
+        end_row = 34 # removed the last 2 sequences b/c they are too long!
         ds = {
             "CDS"         : sheet.cell_value(44,2),
-            "GENE"        : sheet.col_values(colx=1, start_rowx=1, end_rowx=36),
-            "ORF"         : sheet.col_values(colx=3, start_rowx=1, end_rowx=36),
-            "PROT.MEAN"   : sheet.col_values(colx=6, start_rowx=1, end_rowx=36),
-            "PROT.STD"    : sheet.col_values(colx=7, start_rowx=1, end_rowx=36),
+            "GENE"        : sheet.col_values(colx=1, start_rowx=1, end_rowx=end_row),
+            "ORF"         : sheet.col_values(colx=3, start_rowx=1, end_rowx=end_row),
+            "PROT.MEAN"   : sheet.col_values(colx=6, start_rowx=1, end_rowx=end_row),
+            "PROT.STD"    : sheet.col_values(colx=7, start_rowx=1, end_rowx=end_row),
             "PROTEIN"     : "LacZ-fusion",
             "ORGANISM"    : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"      : "Individually Characterized",
@@ -739,7 +738,7 @@ if __name__ == "__main__":
 
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
-    print len(db)
+    
     handle = open('../geneticsystems.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()

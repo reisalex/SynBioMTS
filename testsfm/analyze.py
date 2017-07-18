@@ -197,15 +197,34 @@ class ModelTest(object):
                 x = np.array(df[self.models[m].x][indx])
                 y = np.array(df[self.models[m].y][indx])
 
-                # Run statistics and information theory calcs
-                data,yError = stats.linear_complete(x,y,yScale,self.models[m].a1)
-                data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
-                                                                          positions=df["STARTPOS"][indx])
+                # filter out no-prediction sequences (nan values)
+                setsize = len(x)
+                isnan = np.isnan(x)
+                count_nan = np.sum(isnan)
+                x_noNan = x[~isnan]
+                y_noNan = y[~isnan]
+
+                if (setsize - count_nan > 1):
+                    # Run statistics and information theory calcs
+                    # At least two data points required to run stats
+                    data,yError = stats.linear_complete(x_noNan,y_noNan,yScale,self.models[m].a1)
+                else:
+                    # Insufficient number of sequences in dataset or
+                    # model was unable to predict more than two sequences
+                    data = {}
+
                 data["SUBGROUP"] = subgroup
+                data["Count.Nan"] = count_nan
+                data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
+                                                          positions=df["STARTPOS"][indx])
                 entries.append(data)
 
+                # "Place" yError into correct size array
+                yErrorAll = np.empty((1,setsize))
+                np.place(yErrorAll,~isnan,yError)
+
                 # Add yError to model predictions
-                allError[indx] = yError
+                allError[indx] = yErrorAll
 
                 # Calculate yPredicted based on linear model fit
                 yPredicted = data['slope']*x + data['intercept']
@@ -219,12 +238,29 @@ class ModelTest(object):
                     raise Exception('Bad yScale set for {}'.format(m))
                 allPredicted = np.concatenate((allPredicted,yPredicted))
 
-            # Calculate statistics for model {m} on all data
+            # Calculate statistics for model {m} on ALL data
+            x = allPredicted
             y = np.array(df[self.models[m].y])
-            data,_ = stats.linear_simple(allPredicted,y,yScale)
+
+            setsize = len(x)
+            isnan = np.isnan(x)
+            count_nan = np.sum(isnan)
+            x_noNan = x[~isnan]
+            y_noNan = y[~isnan]
+
+            if (setsize - count_nan > 1):
+                data,_ = stats.linear_simple(x_noNan,y_noNan,xScale=yScale,yScale=yScale)
+            else:
+                data = {}
+
+            data["SUBGROUP"] = "ALL"
+            data["Count.Nan"] = count_nan
+            data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"],\
+                                                      positions=df["STARTPOS"])            
             entries.append(data)
 
             self.statistics[m] = pandas.DataFrame(entries)
+            self.predictions[m]['yPredicted'] = pandas.Series(allPredicted, index=df.index)
             self.predictions[m]['yError'] = pandas.Series(allError, index=df.index)
 
         # write statistics to shelve if filename given
