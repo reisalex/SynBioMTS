@@ -4,6 +4,7 @@ Pearson p
 Spearman R-squared
 Spearman p
 N-outliers
+Count.Nan
 slope
 intercept
 2-fold Error
@@ -12,3 +13,4 @@ intercept
 Normalized KL-divergence
 KL-divergence
 Max KL-divergence
+Sequence entropy

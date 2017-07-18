@@ -10,6 +10,7 @@ used_mRNA_sequence
 predicted_5pUTR
 predicted_CDS
 TIR
+yPredicted
 yError
 dG_total
 dG_mRNA

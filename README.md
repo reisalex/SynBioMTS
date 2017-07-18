@@ -1,7 +1,7 @@
 # test-sfm
 An automated model test system for DNA sequence-function models.
 
-`test-sfm` uses a database of over 16000 unique characterized genetic systems to run Python-wrapped, sequence-function models, quantify model accuracies, accept or reject proposed mechanistic hypotheses, and identify sources of model error. This package is easily modifiable to expand the genetic system database, calculate additional statistical test metrics, and test new and improved gene expression models implemented in nearly any programming language.
+`test-sfm` uses a database of over 16000 unique characterized genetic systems to run Python-wrapped sequence-function models, quantify model accuracy, accept or reject proposed mechanistic hypotheses, and identify sources of model error. This package is easily modifiable to expand the genetic system database, calculate additional statistical test metrics, and test new and improved gene expression models implemented in nearly any programming language.
 
 ## Getting Started
 
@@ -12,6 +12,7 @@ Python packages used are listed below. You can install the first three packages 
 * numpy - General purpose numerical computing
 * [scikit-learn](http://scikit-learn.org/stable/install.html) - Machine learning
 
+#### Optional
 [ViennaRNA](https://www.tbi.univie.ac.at/RNA/) - A C code library for the prediction and comparison of RNA secondary structures. ViennaRNA is wrapped with /models/PyVRNA.py for use in modeling and machine learning analysis.
 
 ### Installing
@@ -21,7 +22,7 @@ git clone https://github.com/reisalex/test-sfm
 cd test-sfm
 sudo python setup.py install
 ```
-The model test system can then be imported by:
+The model test system can then be imported in Python:
 ```python
 import testsfm
 ```
@@ -177,7 +178,7 @@ test.to_excel('filename',predictLabels,statsLabels)
 
 ## Acknowledgements
 
-Thanks to Howard M Salis (Penn State), Iman Farasat (Merck), Amin Espah Borujeni (MIT), Tian Tian (JBEI), Daniel Goodman (Harvard), Sri Kosuri (UCLA), Robert Egbert (Berkeley), Mark Mimee (MIT), and Heather Beck (Vienna) for publishing/providing high quality characterization data. A special thanks to Daniel Goodman for discussion on Flow-seq and for providing additional information on the 2013 Flow-seq datasets.
+Thanks to Howard M Salis (Penn State), Iman Farasat (Merck), Amin Espah Borujeni (MIT), Tian Tian (JBEI), Daniel Goodman (Harvard), Sri Kosuri (UCLA), Robert Egbert (Berkeley), Mark Mimee (MIT), and Heather Beck (Vienna) for providing high quality characterization data. A special thanks to Daniel Goodman for discussion on Flow-seq and for providing additional information on the 2013 Flow-seq datasets.
 
 If you use `test-sfm`, please cite:
 
