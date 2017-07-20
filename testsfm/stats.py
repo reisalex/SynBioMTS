@@ -45,8 +45,10 @@ def vartest2(x,y,logNormal=False,alpha=0.05,test="F"):
         pvalue (float) = the p-value for significance of test decision'''
 
     if logNormal:
-        varx = np.exp(np.var(np.log(x)))
-        vary = np.exp(np.var(np.log(y)))
+        # varx = np.exp(np.var(np.log(x)))
+        # vary = np.exp(np.var(np.log(y)))
+        varx = np.var(np.log(x))
+        vary = np.var(np.log(y))
     else:
         varx = np.var(x)
         vary = np.var(y)
@@ -54,7 +56,7 @@ def vartest2(x,y,logNormal=False,alpha=0.05,test="F"):
     if test == "F":
         df1 = len(x)-1
         df2 = len(y)-1
-        statistic = varx/vary # stat = F
+        statistic = varx/vary
         pvalue = scipy.stats.f.sf(statistic, df1, df2)
 
     elif test == "Barlett":
@@ -68,7 +70,8 @@ def vartest2(x,y,logNormal=False,alpha=0.05,test="F"):
         raise ValueError(error)
 
     h = pvalue < alpha
-    # add confidence interval calculation later
+    # h = True, if we reject the null hypothesis that x & y come from
+    # normal distributions with the same variance
     return (h,statistic,pvalue)
 
 def ttest2(x,y,alpha=0.05):
@@ -78,7 +81,7 @@ def ttest2(x,y,alpha=0.05):
         t (float) = the test statistic
         pvalue (float) = the p-value for significance of test decision'''
 
-    (t,pvalue) = stats.ttest_ind(x,y,equal_var=False,nan_policy='omit')
+    (t,pvalue) = scipy.stats.ttest_ind(x,y,equal_var=False,nan_policy='omit')
     h = pvalue < alpha
     return (h,t,pvalue)
 

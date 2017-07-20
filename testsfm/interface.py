@@ -62,6 +62,7 @@ class Container(dict):
 
         setattr(self, name, pmodel) # not currently used
         self[name] = pmodel
+        self[name].set = False
         self.available = sorted(self.keys())
 
     def remove(self, model):
@@ -86,6 +87,7 @@ class Container(dict):
             assert isinstance(a1,(int,float)), "a1, {}, is the slope and should be a number.".format(a1)
 
         for name in modelNames:
+            self[name].set = True
             self[name].x = x
             self[name].y = y
             self[name].yScale = yScale

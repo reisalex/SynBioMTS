@@ -5,6 +5,7 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 
 """
 
+import os
 import copy_reg
 import types
 import cPickle as pickle
@@ -34,7 +35,7 @@ class ModelTest(object):
 
     def __init__(self,models,dbfilename,filters={},recalc=False,add_data=True,nprocesses=mp.cpu_count(),verbose=False):
         '''Inputs:
-        models (interface.Container obj) = see interface.Container
+        models (interface.Container)  = see interface.Container
         dbfilename (string)           = filename of the geneticsystems database
         filters (dictionary)          = dictionary to filter dataset using dbms
         nprocesses (int)              = number of processes to use with
@@ -68,10 +69,18 @@ class ModelTest(object):
         self._update_database()        
 
     def run(self,calcsFilename=None,statsFilename=None):
+        '''Use run to (1) run model calculations and (2) model statistics
+        Inputs:
+        calcsFilename (str) = If not None, saves model predictions to a shelve persistance object
+        statsFilename (str) = If not None, saves model statistics to a shelve persistance object'''
+
         self.predict(calcsFilename)
         self.calc_stats(statsFilename)
 
     def predict(self,filename=None):
+        '''Use predict to (1) run model calculations without model statistics
+        Inputs:
+        filename (str) = If not None, saves model predictions to a shelve persistance object'''
 
         db = self.database
 
@@ -100,14 +109,16 @@ class ModelTest(object):
             n = len(dict_list)
             n_entries = [(m,n) for m in self.models.available]
 
+        # Call multiprocessing (or MPI) to run model predictions
         if self.nprocesses > 1:
-            pool = mp.Pool(processes=self.nprocesses) # consider chunking
+            pool = mp.Pool(processes=self.nprocesses)
             output = pool.map(self._wrap,bundles)
             pool.close()
             pool.join()
         else:
             output = [self._wrap(bundle) for bundle in bundles]
         
+        # Convert model predictions (list of dictionaries) to pandas dataframes
         db.reset_index(drop=True, inplace=True)
         total = 0
         for model,n in n_entries:
@@ -120,8 +131,8 @@ class ModelTest(object):
             total += n
 
     def _wrap(self,bundle):
-        # the model wrapper will interpret the inputs of the interface.Model
-        # and pull those values from the database
+        ''' _wrap interprets the inputs of the interface.Model and pulls those values
+        from the database; this method requires a tuple input for Python's map() function.'''
 
         (name,entry) = bundle
         # entry = {'ORGANISM':"Escherichia coli",'SEQUENCE':"ACTCGATCTT",...}
@@ -152,6 +163,9 @@ class ModelTest(object):
         return self.models[name](**kargs)
 
     def _update_database(self):
+        ''' _update_database is run on __init__ and anytime the database, datasets,
+        or filters are updated with any of the following methods:
+        add_datasets(), remove_datasets(), remove_filters().'''
 
         try:
             handle = open(self.dbfilename,'r')
@@ -179,9 +193,11 @@ class ModelTest(object):
         self.database = database
 
     def calc_stats(self,filename=None):
-        
-        # assert that model predictions are available
-        # run statistics calculations for only datasets that have been calculated?
+        ''' calc_stats runs stats.linear_complete for models with defined 
+        functional forms; calc_stats runs the statistics on each of the subgroups
+        as well as the full dataset defined by the database any any provided filters.
+        Inputs:
+        filename = If not None, saves model statistics to a shelve persistance object'''
 
         for m in self.models.available:
             df = self.predictions[m]
@@ -219,7 +235,7 @@ class ModelTest(object):
                                                           positions=df["STARTPOS"][indx])
                 entries.append(data)
 
-                # "Place" yError into correct size array
+                # "place" yError into correct size array
                 yErrorAll = np.empty((1,setsize))
                 np.place(yErrorAll,~isnan,yError)
 
@@ -267,18 +283,102 @@ class ModelTest(object):
         if not filename is None:
             pass
     
-    def to_shelve(self,filename):
+    def compare2models(self,modelNames=[],modelCalcs=[]):
+        '''Compares error distributions of two models by computing 
+        F-test and two-sample t-test for equal variance and means respectively.
+        This method calls functions from the stats module.
+        Input:
+        modelNames (list) = one or two modelNames of model(s) that were predicted
+        modelNames (list) = one or two model prediction dataframes
+        *input should be one of either, or two of one only!
+        Output:
+        IN BETA... currently prints a few values to bash '''
+
+        error = "Make sure to provide a list for modelNames for compare2models!"
+        assert isinstance(modelNames,list),error
+        error = "Make sure to provide a list for modelCalcs for compare2models!"
+        assert isinstance(modelCalcs,list),error
         
-        if not filename is None:
-            d = shelve.open(filename)
-            if not d:
-                d.update(self.predictions)
-            else:
-                for model in self.models.available:
-                    d[model] = dbms.udpate(d[model],self.predictions[model],self.identifiers)
-            d.close()
+        # Compare to internal models just run with the test system
+        if len(modelNames) == 2:
+            error = "To compare2models, you should run calc_stats first!"
+            assert all([name in self.statistics.keys() for name in modelNames]),error
+
+        # Compare a model in the test system to an external one
+        elif len(modelNames) == 1 and len(modelCalcs) == 1:
+            error = "modelName, {}, provided was not analyzed with calc_stats".format(modelNames[0])
+            assert modelNames[0] in self.statistics.keys(),error
+            
+            error = "Looking for a pandas dataframe as the item in modelCalcs, not {}.".format(type(modelCalcs[0]))
+            assert isinstance(modelCalcs[0],pandas.DataFrame),error
+            
+
+            self.predictions['Model2'] = modelCalcs[0]
+            modelNames.append('Model2')
+
+        # Compare to external models from outside of the test system
+        elif len(modelCalcs) == 2:
+            error = "You should provide pandas dataframes in a list for compare2models."
+            assert all([isinstance(df,pandas.DataFrame) for df in modelCalcs]),error
+            error = "yError, or the model error, has not been computed for this dataframe."
+            assert all(['yError' in df.keys() for df in modelCalcs]),error
+            
+            self.predictions['Model1'] = modelCalcs[0]
+            self.predictions['Model2'] = modelCalcs[1]
+            modelNames = ['Model1','Model2']
+
+        else:
+            raise Exception("The number of items for the argument lists in compare2models \
+                is {} which exceeds 2.".format(len(modelNames)+len(modelCalcs)))
+
+        # Let's calculate the F-test and the t-tests for these two model error distributions
+        x = self.predictions[modelNames[0]]['yError']
+        y = self.predictions[modelNames[1]]['yError']
+        x = x[~np.isnan(x)]
+        y = y[~np.isnan(y)]
+
+        (_,F,F_pval) = stats.vartest2(x,y,test="F")
+        (_,t,t_pval) = stats.ttest2(x,y)
+        
+        mean1 = np.mean(x)
+        mean2 = np.mean(y)
+        var1 = np.var(x)
+        var2 = np.var(y)
+
+        print "{}\t{}\t\t{}\t{}\t{}\t{}".format(mean1,var1,F,F_pval,t,t_pval)
+
+    def to_shelve(self,filename):
+        '''Export model predictions to shelve.
+        Input:
+        filename (str) = name of shelve object to create
+        Output:
+        A python shelve with model names as keys, and pandas dataframes as values'''
+
+        d = shelve.open(filename)
+        if not d: # if empty
+            d.update(self.predictions)
+        else:
+            for model in self.models.available:
+                # d[model] = dbms.udpate(d[model],self.predictions[model],self.identifiers)
+                
+                # ERROR, CODE NEEDS TO BE UPDATED HERE:
+                '''d[model] = dbms.udpate(d[model],self.predictions[model],self.identifiers)
+                AttributeError: 'module' object has no attribute 'udpate' '''
+        d.close()
 
     def to_excel(self,filename,predictColumns=[],statsColumns=[],models=[]):
+        '''Export model predictions and statistics to an Excel workbook with one
+        worksheet for each model. Preferred method of creating readable output.
+        Input:
+        filename (str)        = name of Excel workbook to create
+        predictColumns (list) = labels from the pandas dataframes to override
+                                automatic alphabetization of all dataframe labels (default behavior)
+        statsColumns (list)   = labels from the stats pandas dataframes to override write
+                                (same behavior as predictColumns)
+        models (list)         = models to export, if [], to_excel writes all predicted models by default
+        Output:
+        A Excel workbook with model predictions and statistics.'''
+
         assert isinstance(filename,str), "Filename provided, {}, for export() needs to be a string.".format(filename)
         if not models:
             models = self.predictions.keys()
@@ -295,11 +395,11 @@ class ModelTest(object):
                 self.predictions[model].to_excel(writer,sheet_name=model,columns=predictColumns)
         if statsColumns:        
             for model in models:
-                self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
+                if model in self.statistics.keys(): 
+                    self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
+                else:
+                    print "Functional form for {} was not specified. Not writing stats.".format(model)
         writer.save()
-
-    def to_csv(self):
-        pass
 
     def add_datasets(self,datasets):
         self.datasets = list(set(self.datasets+datasets))

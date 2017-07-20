@@ -1,59 +1,44 @@
-''' Let's identify the most predictive anti-SD sequence for future use with
-RBS Calculator v2.0. Currently the model uses the 9 3'-most nucleotides of
-the 16S rRNA, however there are 13 total unbase-paired nucleotides, more or
-fewer of which may be interacting with the mRNA ribosome binding site.'''
+
+import sys
+sys.path.append('../')
+sys.path.append('../models')
+# sys.path.append('../datasets')
+# sys.path.append('/usr/local/lib/python2.7/site-packages/')
 
 import testsfm
 import cPickle as pickle
-import numpy as np
-import pandas as pd
+# import TranslationRateModels as tl
 
 # We're going to use shelve to store model predictions
 # as a dictionary-like persistance object of pandas dataframes
 import shelve
 
-# Import RBS Calculator
-import sys
+# Import private Salis Lab code (latest versions of RBS Calculator)
 sys.path.append('/home/alex/Private-Code')
 from DNAc import *
 
-import RBS_Calculator_v2_0
-def RBSCalc_v2(sequence,rRNA,temp,startpos):
-    start_range = [0,startpos+1]
-    model = RBS_Calculator_v2_0.RBS_Calculator(sequence,start_range,rRNA)
-    model.temp = temp
-    model.run()
-    output = model.output()
-    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
-    
-    results = {
-    'TIR' : RBS.tir,
-    'dG_total' : RBS.dG_total,
-    'dG_mRNA_rRNA' : RBS.dG_mRNA_rRNA,
-    'dG_mRNA' : RBS.dG_mRNA,
-    'dG_start' : RBS.dG_start,
-    'dG_standby' : RBS.dG_standby,
-    'dG_spacing' : RBS.dG_spacing,
-    'used_mRNA_sequence' : RBS.sequence,
-    'dG_UTR_fold' : RBS.dG_UTR_folding,
-    'dG_SD_16S_hybrid' : RBS.dG_SD_hybridization,
-    'dG_after_footprint' : RBS.dG_after_footprint_folding,
-    'spacing_length' : RBS.spacing_length,
-    'final_post_cutoff' : RBS.adaptive_post_cutoff,
-    'binding_fragment' : RBS.optimum_hairpin_fragment,
-    'surface_area' : RBS.optimum_available_RNA_surface_area,
-    'dG_distortion' : RBS.optimum_distortion_energy,
-    'dG_sliding' : RBS.optimum_sliding_energy,
-    'dG_unfolding' : RBS.optimum_unfolding_energy,  
-    'most_5p_paired_SD_mRNA' : RBS.most_5p_paired_SD_mRNA,
-    'most_3p_paired_SD_mRNA' : RBS.most_3p_paired_SD_mRNA,
-    'aligned_most_5p_paired_SD_mRNA' : RBS.aligned_most_5p_SD_border_mRNA,
-    'aligned_most_3p_paired_SD_mRNA' : RBS.aligned_most_3p_SD_border_mRNA,
-    '5pUTR' : sequence[:best_start_pos],
-    'CDS' : sequence[best_start_pos:],
-    }
-    
-    return results
+from PyVRNA import PyVRNA
+RNAEnergyModel = PyVRNA(dangles=0)
+
+handle = open('../models/rRNA_16S_3p_ends.p','r')
+rRNA_16S_3p_ends = pickle.load(handle)
+handle.close()
+
+# Required function in RBS Calculators and UTR Designer
+def get_rRNA(organism):
+    # temporary until I update database:
+    if   organism=="Corynebacterium glutamicum B-2784":
+        organism = 'Corynebacterium glutamicum R'
+
+    elif organism=="Pseudomonas fluorescens A506":
+
+        return 'ACCTCCTTT'
+    elif organism=="Escherichia coli BL21(DE3)":
+
+        return 'ACCTCCTTA'
+    else:
+        pass
+    return rRNA_16S_3p_ends[organism]
 
 def find_best_start(mRNA, start_pos, predictions):
     '''Finds the number of start codons, the most highly translated start codon and the start range associated with it.
@@ -63,7 +48,7 @@ def find_best_start(mRNA, start_pos, predictions):
     num_start_codons = 0
     dG_tot_list = []
     dG_best = None
-    
+    best_start_index = None
     for index in range(len(predictions.RBS_list)):
     
         RBS = predictions.RBS_list[index]
@@ -79,76 +64,62 @@ def find_best_start(mRNA, start_pos, predictions):
             dG_best = RBS.dG_total
             best_start_pos = RBS.start_position
     
-    RBS = predictions.RBS_list[best_start_index]
+    if not best_start_index is None:
+        RBS = predictions.RBS_list[best_start_index]
+    else:
+        RBS = None
+        best_start_pos = None
+
     return (RBS,best_start_pos)
 
-def test_model(rRNA,calcs,ref_error=None):
+import RBS_Calculator_v2_2
+def RBSCalc_v2_1(sequence,rRNA,temp,startpos):
+    start_range = [0,startpos+1]
+    # rRNA = get_rRNA(organism)
+    model = RBS_Calculator_v2_2.RBS_Calculator(sequence,start_range,rRNA)
+    model.temp = temp
+    model.run()
+    output = model.output()
+    (RBS,best_start_pos) = find_best_start(sequence,startpos,output)
 
-    # Useful lambda functions
-    calc_dG_apparent = lambda K,beta,prot: np.log(prot/K)/beta
-    calc_TIR = lambda K,beta,dG: K*np.exp(-beta*dG)
+    if RBS is None:
+        results = {}
+    else:    
 
-    all_dG_apparent = np.array([])
-    all_error = np.array([])
+        results = {
+        'TIR' : RBS.tir,
+        'dG_total' : RBS.dG_total,
+        'dG_mRNA_rRNA' : RBS.dG_mRNA_rRNA,
+        'dG_mRNA' : RBS.dG_mRNA,
+        'dG_start' : RBS.dG_start,
+        'dG_standby' : RBS.dG_standby,
+        'dG_spacing' : RBS.dG_spacing,
+        'used_mRNA_sequence' : RBS.sequence,
+        'dG_UTR_fold' : RBS.dG_UTR_folding,
+        'dG_SD_16S_hybrid' : RBS.dG_SD_hybridization,
+        'dG_after_footprint' : RBS.dG_after_footprint_folding,
+        'spacing_length' : RBS.spacing_length,
+        'final_post_cutoff' : RBS.adaptive_post_cutoff,
+        'binding_fragment' : RBS.optimum_hairpin_fragment,
+        'surface_area' : RBS.optimum_available_RNA_surface_area,
+        'dG_distortion' : RBS.optimum_distortion_energy,
+        'dG_sliding' : RBS.optimum_sliding_energy,
+        'dG_unfolding' : RBS.optimum_unfolding_energy,  
+        'most_5p_paired_SD_mRNA' : RBS.most_5p_paired_SD_mRNA,
+        'most_3p_paired_SD_mRNA' : RBS.most_3p_paired_SD_mRNA,
+        'aligned_most_5p_paired_SD_mRNA' : RBS.aligned_most_5p_SD_border_mRNA,
+        'aligned_most_3p_paired_SD_mRNA' : RBS.aligned_most_3p_SD_border_mRNA,
+        'predicted_5pUTR' : sequence[:best_start_pos],
+        'predicted_CDS' : sequence[best_start_pos:],
+        }
 
-    # get each subset, and fit proportionality constant
-    for SG in calcs["SUBGROUP"].unique():
-        dG_total = np.array(calcs["dG_total"][calcs["SUBGROUP"]==SG])
-        protein  = np.array(database["PROT.MEAN"][database["SUBGROUP"]==SG])
-
-        # print SG
-        # print dG_total
-        # print protein
-
-        # determine outliers with initial fit
-        (beta,K) = testsfm.stats.fit_linear_model(dG_total,np.log(protein),slope=-0.45)
-        dG_apparent = calc_dG_apparent(K,beta,protein)
-        ddG = dG_total - dG_apparent
-        ddG_abs = np.absolute(ddG)
-        outliers = testsfm.stats.find_outliers(ddG_abs)
-        keepers = np.invert(outliers)
-
-        # reapply fit with trimmed dataset & calculate error
-        dG_total_trimmed = dG_total[keepers]
-        protein_trimmed  = protein[keepers]
-        (beta,K) = testsfm.stats.fit_linear_model(dG_total_trimmed,np.log(protein_trimmed),slope=-0.45)
-        dG_apparent = calc_dG_apparent(K,beta,protein)
-        TIR = calc_TIR(K,0.45,dG_total)
-        TIR_error = protein/TIR
-
-        # save dG_apparent & ddG
-        all_dG_apparent = np.append(all_dG_apparent,dG_apparent)
-        all_error = np.append(all_error,TIR_error)
-
-        # print K
-        # wait = input("value=")
-
-    # calculate R^2
-    (R,Pearsonp) = testsfm.stats.correlation(np.array(calcs["dG_total"]),all_dG_apparent)
-    Rsqr = R**2
-
-    # calculate F-test for equal variances against "AGGAGG"
-    # ddG_ref are the ddG values computed for "AGGAGG"
-    if ref_error == None: ref_error = all_error
-    (h,F,Ftestp) = testsfm.stats.vartest2(all_error,ref_error,logNormal=True,alpha=0.05,test="F")
-
-    # calculate Kullback-Leibler divergence
-    (NKLdiv,KLdiv,KLdivmax) = testsfm.stats.normKLdiv(all_error,b=4)
-
-    # return results
-    results = {
-    'rRNA': rRNA,
-    'Rsqr': Rsqr,
-    'Pearsonp': Pearsonp,
-    'F': F,
-    'Ftestp': Ftestp,
-    'TIR_error': all_error,
-    'error var': np.exp(np.var(np.log(all_error))),
-    'NKLdiv': NKLdiv
-    }
+        # Save dot-parentheses structure for initial state mRNA structure
+        bpx = RBS.initial_structure['bp_x']
+        bpy = RBS.initial_structure['bp_y']
+        viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
+        results['initial_structure'] = viennafld
 
     return results
-
 
 if __name__ == "__main__":
 
@@ -181,33 +152,25 @@ if __name__ == "__main__":
     
     # add models to interface.Models
     # model names are the tested 16S rRNA sequence
-    transl_rate_models = testsfm.interface.Models()
+    models = testsfm.interface.Container()
+    modelNames = []
     for (rRNA,pos,length) in candidates:
-        transl_rate_models.add(alias=rRNA,model=RBSCalc_v2,rRNA=rRNA)
+        models.add(model=RBSCalc_v2_1,rRNA=rRNA)
+        models.changeName('RBSCalc_v2_1',rRNA)
+        modelNames.append(rRNA)
 
-    customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,verbose=True)
-    customtest.run(filename='test_16S_rRNA.db')
+    models.setform(modelNames, x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
-    # Now that the test run, let's calculate the proportionality constants,
-    # and the statistics (including F-test for equal variance, and R^2 values)
+    customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=False)
+    customtest.run()
 
-    # load the database
-    handle = open(dbfilename,'r')
-    database = pickle.load(handle)
-    handle.close()
-    
-    # load the model calculations
-    modelcalcs = shelve.open('test_16S_rRNA.db')
+    for modelName in modelNames:
+        ModelTestSystem.compare2models(modelNames=[modelName,'CCUCCU'])
 
-    # calculate reference model first
-    rRNA = "CCUCCU"
-    calcs = modelcalcs[rRNA]
-    results = test_model(rRNA,calcs)
-    ref_error = results["TIR_error"]
-    # calculate all models and export to excel
-    all_results = [test_model(rRNA,modelcalcs[rRNA],ref_error) for (rRNA,pos,length) in candidates]
+    # Write model predictions and statistics to Excel
+    with open("labels/labels1.txt","r") as f:
+        predictLabels = [x.strip('\n') for x in f.readlines()]
+    with open("labels/labels_stats.txt","r") as f:
+        statsLabels = [x.strip('\n') for x in f.readlines()]
 
-    output = pd.DataFrame(all_results)
-    output.to_excel('test_Ecoli_aSD_seqs.xlsx',sheet_name='Results')
-
-    modelcalcs.close()
+    ModelTestSystem.to_excel('RBS_Calc_16SrRNA_diff_lengths',predictLabels,statsLabels)
