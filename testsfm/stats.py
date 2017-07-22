@@ -45,19 +45,27 @@ def vartest2(x,y,logNormal=False,alpha=0.05,test="F"):
         pvalue (float) = the p-value for significance of test decision'''
 
     if logNormal:
-        # varx = np.exp(np.var(np.log(x)))
-        # vary = np.exp(np.var(np.log(y)))
-        varx = np.var(np.log(x))
-        vary = np.var(np.log(y))
+        varx = np.exp(np.var(np.log(x))) # an estimate
+        vary = np.exp(np.var(np.log(y)))
+        # varx = np.var(np.log(x))
+        # vary = np.var(np.log(y))
     else:
         varx = np.var(x)
         vary = np.var(y)
 
     if test == "F":
-        df1 = len(x)-1
-        df2 = len(y)-1
         statistic = varx/vary
-        pvalue = scipy.stats.f.sf(statistic, df1, df2)
+        if statistic < 1:
+            df1 = len(y)-1
+            df2 = len(x)-1
+            F = 1/statistic
+        else:
+            df1 = len(x)-1
+            df2 = len(y)-1            
+            F = statistic
+        pvalue = scipy.stats.f.sf(F, df1, df2)
+        if F == 1.0:
+            pvalue = 0.0
 
     elif test == "Barlett":
         (statistic,pvalue) = scipy.stats.bartlett(x,y)

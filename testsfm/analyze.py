@@ -201,9 +201,9 @@ class ModelTest(object):
 
         for m in self.models.available:
             df = self.predictions[m]
-            allError = np.inf*np.ones(len(df))
+            allError = np.nan*np.ones(len(df))
+            allPredicted = np.nan*np.ones(len(df))
             entries = []
-            allPredicted = np.array([])
             yScale = self.models[m].yScale
 
             for subgroup in df["SUBGROUP"].unique():
@@ -220,39 +220,45 @@ class ModelTest(object):
                 x_noNan = x[~isnan]
                 y_noNan = y[~isnan]
 
-                if (setsize - count_nan > 1):
+                # Insufficient number of sequences in dataset or
+                # model was unable to predict more than two sequences
+                if (setsize - count_nan < 2):
+                    data = {}
+                    yErrorAll = np.nan*np.ones(setsize)
+                    yPredicted = np.nan*np.ones(setsize)
+                    
+                else:
                     # Run statistics and information theory calcs
                     # At least two data points required to run stats
                     data,yError = stats.linear_complete(x_noNan,y_noNan,yScale,self.models[m].a1)
-                else:
-                    # Insufficient number of sequences in dataset or
-                    # model was unable to predict more than two sequences
-                    data = {}
 
+                    # "place" yError into correct size array
+                    yErrorAll = np.nan*np.ones(setsize)
+                    np.place(yErrorAll,~isnan,yError)
+
+                    # Calculate yPredicted based on linear model fit
+                    yPredicted = data['slope']*x + data['intercept']
+                    if yScale == 'ln':
+                        yPredicted = np.exp(yPredicted)
+                    elif yScale == 'log10':
+                        yPredicted = np.power(10,yPredicted)
+                    elif yScale == 'linear':
+                        pass
+                    else:
+                        raise Exception('Bad yScale set for {}'.format(m))
+
+                    # Add yError and yPredicted to model predictions
+                    allError[indx] = yErrorAll
+                    allPredicted[indx] = yPredicted
+
+                # Define subgroup, number of non-predicted sequence, and sequence entropy
                 data["SUBGROUP"] = subgroup
                 data["Count.Nan"] = count_nan
                 data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
                                                           positions=df["STARTPOS"][indx])
+
+                # Append data to entries
                 entries.append(data)
-
-                # "place" yError into correct size array
-                yErrorAll = np.empty((1,setsize))
-                np.place(yErrorAll,~isnan,yError)
-
-                # Add yError to model predictions
-                allError[indx] = yErrorAll
-
-                # Calculate yPredicted based on linear model fit
-                yPredicted = data['slope']*x + data['intercept']
-                if yScale == 'ln':
-                    yPredicted = np.exp(yPredicted)
-                elif yScale == 'log10':
-                    yPredicted = np.power(10,yPredicted)
-                elif yScale == 'linear':
-                    pass
-                else:
-                    raise Exception('Bad yScale set for {}'.format(m))
-                allPredicted = np.concatenate((allPredicted,yPredicted))
 
             # Calculate statistics for model {m} on ALL data
             x = allPredicted
@@ -292,7 +298,9 @@ class ModelTest(object):
         modelNames (list) = one or two model prediction dataframes
         *input should be one of either, or two of one only!
         Output:
-        IN BETA... currently prints a few values to bash '''
+        IN BETA... currently prints a few values to bash
+
+        NOTE: SECOND MODEL IS CONSIDERED THE NULL HYPOTHESIS'''
 
         error = "Make sure to provide a list for modelNames for compare2models!"
         assert isinstance(modelNames,list),error
@@ -337,15 +345,16 @@ class ModelTest(object):
         x = x[~np.isnan(x)]
         y = y[~np.isnan(y)]
 
-        (_,F,F_pval) = stats.vartest2(x,y,test="F")
+        (_,F,F_pval) = stats.vartest2(x,y,logNormal=True,test="F")
         (_,t,t_pval) = stats.ttest2(x,y)
         
+        R2 = list(self.statistics[modelNames[0]]['Pearson R-squared'])[-1]
         mean1 = np.mean(x)
         mean2 = np.mean(y)
-        var1 = np.var(x)
-        var2 = np.var(y)
+        var1 = np.exp(np.var(np.log(x)))
+        var2 = np.exp(np.var(np.log(y)))
 
-        print "{}\t{}\t\t{}\t{}\t{}\t{}".format(mean1,var1,F,F_pval,t,t_pval)
+        print "{}\t{}\t{}\t\t{}\t{}\t{}\t{}".format(R2,mean1,var1,F,F_pval,t,t_pval)
 
     def to_shelve(self,filename):
         '''Export model predictions to shelve.
