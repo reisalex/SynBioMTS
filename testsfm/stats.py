@@ -10,6 +10,7 @@ import re
 import numpy as np
 import sklearn
 import scipy
+import scipy.stats
 
 def correlation(x,y,name="Pearson"):
     # Linear or rank correlation

@@ -435,7 +435,11 @@ class PyVRNA(object):
         """
         # Test if vienna_string has all valid characters
         if self.test_inputs:
-            assert set(vienna_string) <= set('.([+])'), 'in vienna2bp: vienna_string must be a string of .([+]) characters only.'
+            assert set(vienna_string) <= set('&.([+])'), 'in vienna2bp: vienna_string must be a string of .([+]) characters only.'
+            assert vienna_string.count('&') == 1, 'Odd input. Should only have 1 & if a cofold, you provided: {}.'.format(vienna_string)
+
+        if '&' in vienna_string:
+            vienna_string = vienna_string.replace('&','')
 
         # Setup data structures and variables for computing bp 
         bp_tuple          = self.create_bp_tuple(length=len(vienna_string))
