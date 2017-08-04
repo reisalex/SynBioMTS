@@ -380,7 +380,10 @@ def sequence_entropy(sequences,align="left",positions=None):
 
     return Hseq,S
 
-def linear_complete(xVals,yVals,yScale='linear',slope=None):
+def linear_complete(xVals,yVals,xScale='linear',yScale='linear',slope=None):
+
+    print xVals
+    print yVals
 
     # Useful lambda functions
     calc_x = lambda a0,a1,y: (y-a0)/a1
@@ -390,7 +393,15 @@ def linear_complete(xVals,yVals,yScale='linear',slope=None):
     elif yScale == 'ln':     yVals = np.log(yVals)
     elif yScale == 'linear': pass
     else: raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
-    
+
+    if xScale == 'log10':    xVals = np.log10(xVals)
+    elif xScale == 'ln':     xVals = np.log(xVals)
+    elif xScale == 'linear': pass
+    else: raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))    
+
+    print xVals
+    print yVals
+
     # determine outliers with initial fit
     (a1,a0) = fit_linear_model(xVals,yVals,slope=slope)
     app_xVals = calc_x(a0,a1,yVals)
@@ -404,7 +415,9 @@ def linear_complete(xVals,yVals,yScale='linear',slope=None):
     (a1,a0) = fit_linear_model(xVals1,yVals1,slope=slope)
     app_xVals = calc_x(a0,a1,yVals)
     y_predicted = calc_y(a0,a1,xVals)
-    
+
+    print y_predicted
+
     if yScale == 'log10': yError = 10**(yVals)/10**(y_predicted)
     elif yScale == 'ln':  yError = np.exp(yVals)/np.exp(y_predicted)
     else:                 yError = yVals/y_predicted
@@ -443,23 +456,15 @@ def linear_complete(xVals,yVals,yScale='linear',slope=None):
 
 def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
 
-    if xScale == 'log10':
-        xVals = np.log10(xVals)
-    elif xScale == 'ln':
-        xVals = np.log(xVals)
-    elif xScale == 'linear':
-        pass
-    else:
-        raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))
+    if yScale == 'log10':    yVals = np.log10(yVals)
+    elif yScale == 'ln':     yVals = np.log(yVals)
+    elif yScale == 'linear': pass
+    else: raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
 
-    if yScale == 'log10':
-        yVals = np.log10(yVals)
-    elif yScale == 'ln':
-        yVals = np.log(yVals)
-    elif yScale == 'linear':
-        pass
-    else:
-        raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
+    if xScale == 'log10':    xVals = np.log10(xVals)
+    elif xScale == 'ln':     xVals = np.log(xVals)
+    elif xScale == 'linear': pass
+    else: raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))    
 
     # Calculate Pearson/Spearman correlation coefficients
     (R,Pearson_p) = correlation(xVals,yVals)

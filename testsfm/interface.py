@@ -75,14 +75,15 @@ class Container(dict):
         self.pop(name)
         self.available = sorted(self.keys())
 
-    def setform(self, modelNames, x, y, yScale='log10', a1=None):
+    def setform(self,modelNames,x,y,xScale='linear',yScale='linear',a1=None):
 
-        yScale_options = ['linear','ln','log10']
+        options = ['linear','ln','log10']
         for model in modelNames:
             assert model in self.available, "Model {} not in container.".format(model)
         assert isinstance(x,str), "x should be a string, is {}.".format(type(x))
         assert isinstance(y,str), "y should be a string, is {}.".format(type(y))
-        assert yScale in yScale_options, "yScale should be one of: {}".format(yScale_options)
+        assert xScale in options, "xScale should be one of: {}".format(options)
+        assert yScale in options, "yScale should be one of: {}".format(options)
         if not a1 is None:
             assert isinstance(a1,(int,float)), "a1, {}, is the slope and should be a number.".format(a1)
 
@@ -90,6 +91,7 @@ class Container(dict):
             self[name].set = True
             self[name].x = x
             self[name].y = y
+            self[name].xScale = xScale
             self[name].yScale = yScale
             self[name].a1 = float(a1) if isinstance(a1,(int,float)) else None
             # self.form[name] = {'x': x, 'y': y, 'yScale': yScale,  'a1': float(a1)}

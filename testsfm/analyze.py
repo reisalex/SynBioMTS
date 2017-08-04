@@ -205,6 +205,7 @@ class ModelTest(object):
             allPredicted = np.nan*np.ones(len(df))
             entries = []
             yScale = self.models[m].yScale
+            xScale = self.models[m].xScale
 
             for subgroup in df["SUBGROUP"].unique():
 
@@ -213,16 +214,16 @@ class ModelTest(object):
                 x = np.array(df[self.models[m].x][indx])
                 y = np.array(df[self.models[m].y][indx])
 
-                # filter out no-prediction sequences (nan values)
+                # filter out no-prediction sequences (nan and inf values)
                 setsize = len(x)
-                isnan = np.isnan(x)
-                count_nan = np.sum(isnan)
-                x_noNan = x[~isnan]
-                y_noNan = y[~isnan]
+                invalid = np.isnan(x) + np.isinf(x) + (x == 0.0)
+                count_invalid = np.sum(invalid)
+                x_valid = x[~invalid]
+                y_valid = y[~invalid]
 
                 # Insufficient number of sequences in dataset or
                 # model was unable to predict more than two sequences
-                if (setsize - count_nan < 2):
+                if (setsize - count_invalid < 2):
                     data = {}
                     yErrorAll = np.nan*np.ones(setsize)
                     yPredicted = np.nan*np.ones(setsize)
@@ -230,22 +231,24 @@ class ModelTest(object):
                 else:
                     # Run statistics and information theory calcs
                     # At least two data points required to run stats
-                    data,yError = stats.linear_complete(x_noNan,y_noNan,yScale,self.models[m].a1)
+                    print m
+                    data,yError = stats.linear_complete(x_valid,y_valid,xScale,yScale,self.models[m].a1)
 
                     # "place" yError into correct size array
                     yErrorAll = np.nan*np.ones(setsize)
-                    np.place(yErrorAll,~isnan,yError)
+                    np.place(yErrorAll,~invalid,yError)
 
                     # Calculate yPredicted based on linear model fit
+                    if   xScale == 'ln':     x = np.log(x)
+                    elif xScale == 'log10':  x = np.log10(x)
+                    elif xScale == 'linear': pass
+                    else: raise Exception('Bad xScale set for {}'.format(m))
+
                     yPredicted = data['slope']*x + data['intercept']
-                    if yScale == 'ln':
-                        yPredicted = np.exp(yPredicted)
-                    elif yScale == 'log10':
-                        yPredicted = np.power(10,yPredicted)
-                    elif yScale == 'linear':
-                        pass
-                    else:
-                        raise Exception('Bad yScale set for {}'.format(m))
+                    if   yScale == 'ln':     yPredicted = np.exp(yPredicted)
+                    elif yScale == 'log10':  yPredicted = np.power(10,yPredicted)
+                    elif yScale == 'linear': pass
+                    else: raise Exception('Bad yScale set for {}'.format(m))
 
                     # Add yError and yPredicted to model predictions
                     allError[indx] = yErrorAll
@@ -253,7 +256,7 @@ class ModelTest(object):
 
                 # Define subgroup, number of non-predicted sequence, and sequence entropy
                 data["SUBGROUP"] = subgroup
-                data["Count.Nan"] = count_nan
+                data["Count.Invalid"] = count_invalid
                 data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
                                                           positions=df["STARTPOS"][indx])
 
@@ -265,18 +268,18 @@ class ModelTest(object):
             y = np.array(df[self.models[m].y])
 
             setsize = len(x)
-            isnan = np.isnan(x)
-            count_nan = np.sum(isnan)
-            x_noNan = x[~isnan]
-            y_noNan = y[~isnan]
-
-            if (setsize - count_nan > 1):
-                data,_ = stats.linear_simple(x_noNan,y_noNan,xScale=yScale,yScale=yScale)
+            invalid = np.isnan(x) + np.isinf(x) + (x == 0.0)
+            count_invalid = np.sum(invalid)
+            x_valid = x[~invalid]
+            y_valid = y[~invalid]
+                
+            if (setsize - count_invalid > 1):
+                data,_ = stats.linear_simple(x_valid,y_valid,xScale=yScale,yScale=yScale)
             else:
                 data = {}
 
             data["SUBGROUP"] = "ALL"
-            data["Count.Nan"] = count_nan
+            data["Count.Nan"] = count_invalid
             data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"],\
                                                       positions=df["STARTPOS"])            
             entries.append(data)
