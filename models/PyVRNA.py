@@ -8,6 +8,7 @@ Trivia: This wrapper was engineered by Ayaan with lots of love and care during h
 
 # Required for PyVRNA
 import RNA
+import math
 from   itertools   import izip,  imap, chain
 from   collections import deque, namedtuple, OrderedDict
 from   operator    import itemgetter
@@ -55,7 +56,7 @@ class PyVRNA(object):
     Usage: object_name = PyVRNA(temperature=float, dangles=int, gquad=bool, parameter_file=string, test_inputs=bool)
            object_name.function_name(parameters)
     """
-    def __init__(self, temperature=37.0, dangles=2, gquad=False, parameter_file="rna_andronescu2007.par", test_inputs=False, enforce_constraints=True):
+    def __init__(self, temperature=37.0, dangles=2, gquad=False, parameter_file="rna_andronescu2007.par", duplex_adjustment=True, test_inputs=False, enforce_constraints=True):
         """
         Initializes an PyVRNA object, after validating all parameters.
 
@@ -114,6 +115,10 @@ class PyVRNA(object):
         # Setup model parameter file and test_input variables
         RNA.read_parameter_file(self.parameter_directory+parameter_file)
         self.test_inputs                = test_inputs
+
+        # Calculate dG_init adjustment for associating strands with specified temperature
+        self.duplex_adjustment = duplex_adjustment
+        self.dG_init_adjustment = self._calc_dG_init_adjustment()
 
         # Setup result structures as namedtuples
         self.PyVRNA_fold_result         = namedtuple('PyVRNA_fold_result',     'structure energy')
@@ -203,27 +208,37 @@ class PyVRNA(object):
 
         Usage: energy_model._test_bp_tuple(bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky, bp_tuple.gquad, func_name=string) # Validates bpx/bpy, pkx/pky and gquad in func_name
         """
-        assert type(length) == int,                             ''.join(['in ', func_name, ': length must be an integer.'])
+        assert isinstance(length,list),                         ''.join(['in ', func_name, ': length must be an integer.'])
         assert length >= max([len(bpx), len(pkx), len(gquad)]), ''.join(['in ', func_name, ': length must be greater than or equal to the length of bpx/bpy, pkx/pky and quad lists.'])
         assert len(bpx) == len(bpy),                            ''.join(['in ', func_name, ': bpx and bpy must have same length.'])
         assert len(pkx) == len(pky),                            ''.join(['in ', func_name, ': pkx and pky must have same length.'])
         for index, gquad_tuple in enumerate(gquad):
             assert len(gquad_tuple) == 4, ''.join(['in ', func_name, ': gquad[', str(index), '] must contain 4 indices.'])
 
-    def DuplexEnergyAdjustment(self, sequences):
+    def _calc_dG_init_adjustment(self):
         """
-        An enthalpic bonus from stacking interactions for two strands hybridizing together, and is not sequence specific. - Dr. Salis
+        Adjustment according to Dirks et al., Thermodynamic Analysis of Interacting Nucleic Acid Strands
+        See footnote 13: "Based on dimensional analysis, we define our concentrations as mole fractions rather than
+        molarities. Therefore, the free energy of strand association for a complex of L strands is..."
+        
+        Based on a partition function analysis of dilute solutions of ionteracting strands
+        in a fixed volume (the "box")
 
         NOTE:  This function is explictly called from other functions in this class that returns minimum free energy of a duplex.
                No external calls are required in order to ensure that energies are adjusted.
-
-        Usage: energy = energy_model.some_function_returning_duplex_energy(parameters).energy # Pre-adjustment energy
-               energy_final = energy + energy_model.DuplexEnergyAdjustment(parameters)        # Adjusted energy
         """
-        if len(sequences) > 1:
-            return -2.481
-        # Hi Alex, extend all functionalities here
-        return 0.0
+        
+        kB = 0.00198717 # Boltzmann constant in kcal/mol/K
+        T = self.settings.temperature
+        a = [-3.983035, 301.797, 522528.9, 69.34881, 999.974950]
+
+        # Calculate the number of moles of water per liter (molarity) at temperature (T in deg C)
+        # Density of water calculated using data from 
+        # Tanaka M., Girard, G., Davis, R., Peuto A., Bignell, N.
+        # Recommended table for the density of water..., Metrologia, 2001, 38, 301-309
+        pH2O = a[4] * (1 - (T+a[0])**2.0*(T+a[1])/a[2]/(T+a[3])) / 18.0152
+
+        return -kB*(T+273.15)*math.log(pH2O)
 
     def RNAcentroid(self, sequence, constraint=None, aptamers=[], aptamer_constraints=[], dG_ligands=[]):
         """
@@ -283,8 +298,13 @@ class PyVRNA(object):
                 fc_obj.sc_add_hi_motif(aptamer,fld,dG,0) # 0 is VRNA_OPTION_DEFAULT                
         structure, energy = fc_obj.mfe_dimer()
         
+        if self.duplex_adjustment and set('.') < set(structure):
+            energy += self.dG_init_adjustment
+
+        structure = structure[:len(sequences[0])] + "&" + structure[len(sequences[0]):]
+
         # Return the cofold structure and energy
-        return self.PyVRNA_fold_result(structure=structure, energy=energy+self.DuplexEnergyAdjustment(sequences))
+        return self.PyVRNA_fold_result(structure=structure, energy=energy)
 
     def RNAensemble(self, sequence, constraint=None, aptamers=[], aptamer_constraints=[], dG_ligands=[]):
         """
@@ -326,8 +346,13 @@ class PyVRNA(object):
             self._test_sequences(sequence_list=sequences, func_name='RNAeval')
             self._test_non_sequences(non_sequence_list=structures, sequence_list=sequences, func_name='RNAeval', test_for='structure')
 
+        energy = RNA.fold_compound("&".join(sequences), self.settings).eval_structure("".join(structures))
+
+        if self.duplex_adjustment and len(sequences) > 1 and set('.') < set("".join(structures)):
+            energy += self.dG_init_adjustment
+
         # Return the energy (chained setup of ViennaRNA library object and call to eval_structure function)
-        return RNA.fold_compound("&".join(sequences), self.settings).eval_structure("".join(structures)) + self.DuplexEnergyAdjustment(sequences)
+        return energy
 
     def RNAfold(self, sequence, constraint=None, aptamers=[], aptamer_constraints=[], dG_ligands=[]):
         """
@@ -397,13 +422,17 @@ class PyVRNA(object):
             for aptamer,fld,dG in zip(aptamers,aptamer_constraints,dG_ligands):
                 fc_obj.sc_add_hi_motif(aptamer,fld,dG,0) # 0 is VRNA_OPTION_DEFAULT
 
-        subopt_list = [self.PyVRNA_fold_result(structure=solution.structure, energy=solution.energy + self.DuplexEnergyAdjustment(sequences)) for solution in fc_obj.subopt(delta_energy*100)]
+        if self.duplex_adjustment and len(sequences) > 1:
+            subopt_list = [self.PyVRNA_fold_result(structure=solution.structure, energy=solution.energy + self.dG_init_adjustment if set('&.') < set(solution.structure) else 0.0) for solution in fc_obj.subopt(delta_energy*100)]
+        else:
+            subopt_list = [self.PyVRNA_fold_result(structure=solution.structure, energy=solution.energy) for solution in fc_obj.subopt(delta_energy*100)]
+
         subopt_list.sort(key=itemgetter(1))
         
         # Return the fold structure and energy of all suboptimal structures
         return subopt_list
 
-    def create_bp_tuple(self, length=None, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def create_bp_tuple(self, length=[], bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
         Returns a customized bp_tuple from input bpx, bpy, pkx, pky and gquad lists.
 
@@ -436,13 +465,17 @@ class PyVRNA(object):
         # Test if vienna_string has all valid characters
         if self.test_inputs:
             assert set(vienna_string) <= set('&.([+])'), 'in vienna2bp: vienna_string must be a string of .([+]) characters only.'
-            assert vienna_string.count('&') == 1, 'Odd input. Should only have 1 & if a cofold, you provided: {}.'.format(vienna_string)
+            assert vienna_string.count('&') <= 1, 'Odd input. Should only have 1 & if a cofold, you provided: {}.'.format(vienna_string)
 
         if '&' in vienna_string:
-            vienna_string = vienna_string.replace('&','')
+            split_string = vienna_string.split('&')
+            length = [len(x) for x in split_string]
+            vienna_string = "".join(split_string)
+        else:
+            length = [len(vienna_string)]
 
         # Setup data structures and variables for computing bp 
-        bp_tuple          = self.create_bp_tuple(length=len(vienna_string))
+        bp_tuple          = self.create_bp_tuple(length=length)
         bp_stack, pk_stack = [], []
         bp_dict, pk_dict   = OrderedDict(), OrderedDict()
         has_gquad          = False
@@ -520,7 +553,7 @@ class PyVRNA(object):
             self._test_bp_tuple(length=bp_tuple.length, bpx=bp_tuple.bpx, bpy=bp_tuple.bpy, pkx=bp_tuple.pkx, pky=bp_tuple.pky, gquad=bp_tuple.gquad, func_name='bptuple2vienna')
 
         # Place all appropriate symbols in vienna_string_list
-        vienna_string_list = ['.'] * bp_tuple.length
+        vienna_string_list = ['.'] * sum(bp_tuple.length)
         for i, j in izip(bp_tuple.bpx, bp_tuple.bpy):
             if i >= 0 and j >= 0: vienna_string_list[i-1], vienna_string_list[j-1] = '(', ')'
             else                : break
@@ -531,6 +564,9 @@ class PyVRNA(object):
             if i >= 0 and j >= 0 and k >= 0 and l >= 0: vienna_string_list[i-1], vienna_string_list[j-1], vienna_string_list[k-1], vienna_string_list[l-1] = '+', '+', '+', '+'
             else                                      : break
         
+        if len(bp_tuple.length) == 2:
+            vienna_string_list.insert(bp_tuple.length[0],'&')
+
         # Return the vienna_string from its list
         return "".join(vienna_string_list)
 
@@ -571,7 +607,7 @@ class ViennaRNA(dict):
         # Legacy: Parsing and storing output
         bp_tuple = energy_model.vienna2bp(structure)
         self["program"]                 = "Centroid"
-        self["totalnt"]                 = [bp_tuple.length]
+        self["totalnt"]                 = bp_tuple.length
         self["Centroid_energy"]         = [energy]
         self['Centroid_bracket_string'] = structure
         self["Centroid_basepairing_x"]  = [bp_tuple.bpx]
@@ -581,13 +617,13 @@ class ViennaRNA(dict):
     def convert_bracket_to_numbered_pairs(self, bracket_string):
         # New: PyVRNA execution
         bp_tuple = PyVRNA(test_inputs=False).vienna2bp(bracket_string)
-        return [[bp_tuple.length], bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky]
+        return [bp_tuple.length, bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky]
 
     # Legacy
     def convert_numbered_pairs_to_bracket(self, strands, bp_x, bp_y, PK_bp_x=[], PK_bp_y=[], Gquad_bp=[]):
         # New: PyVRNA execution
         energy_model = PyVRNA(test_inputs=False)
-        bp_tuple = energy_model.PyVRNA_bp_result (length=sum(strands), bpx=bp_x, bpy=bp_y, pkx=PK_bp_x, pky=PK_bp_y, gquad=Gquad_bp)
+        bp_tuple = energy_model.PyVRNA_bp_result(length=strands, bpx=bp_x, bpy=bp_y, pkx=PK_bp_x, pky=PK_bp_y, gquad=Gquad_bp)
         return energy_model.bptuple2vienna(bp_tuple)
 
     # Legacy
@@ -600,8 +636,8 @@ class ViennaRNA(dict):
 
         # New: PyVRNA execution
         energy_model = PyVRNA(temperature=Temp, dangles=self.dangles_dict[dangles], gquad=self["Gquad"], parameter_file=self["RNA_model_param"], test_inputs=False)
-        bp_tuple     = energy_model.PyVRNA_bp_result(length=sum(strands), bpx=base_pairing_x, bpy=base_pairing_y, pkx=[], pky=[], gquad=[])
-        energy       = energy_model.RNAeval(sequences, [energy_model.bptuple2vienna(bp_tuple)])
+        bp_tuple     = energy_model.PyVRNA_bp_result(length=strands, bpx=base_pairing_x, bpy=base_pairing_y, pkx=[], pky=[], gquad=[])
+        energy       = energy_model.RNAeval(sequences, energy_model.bptuple2vienna(bp_tuple).split('&'))
 
         # Legacy: Parsing and storing output
         self["program"]              = "energy"
@@ -629,7 +665,7 @@ class ViennaRNA(dict):
         # Legacy: Parsing and storing output
         bp_tuple = energy_model.vienna2bp(structure)
         self["program"]            = "mfe"
-        self["totalnt"]            = [bp_tuple.length]
+        self["totalnt"]            = bp_tuple.length
         self["mfe_energy"]         = [energy]
         self["mfe_bracket_string"] = structure
         self["mfe_basepairing_x"]  = [bp_tuple.bpx]
@@ -669,7 +705,7 @@ def tests():
     Tests each function in PyVRNA class
     """
     print ""
-    print "-=-=- PyVRNA test suite -=-=-"
+    print "### === Testing PyVRNA class === ###"
 
     # Tests for parameter files
     print 'Testing all parameter files...',
@@ -695,7 +731,7 @@ def tests():
     fold_result  = energy_model.RNAfold(sequence)
     assert [fold_result.structure, fold_result.energy] == ['(((.(((...))))))', -4.619999885559082]
     energy_model = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAcentroid
     print 'Testing RNAcentroid...',
@@ -709,8 +745,9 @@ def tests():
     cntrd_result = energy_model.RNAcentroid(sequence)
     assert [cntrd_result.structure, cntrd_result.energy, cntrd_result.distance] == ['(((.(((...))))))((((((...))).)))', -13.5, 2.4947844957445318]
     energy_model = None
+    print 'Good.'
 
-    print 'Testing centroid: RNAcentroid with aptamers...'
+    print 'Testing RNAcentroid with aptamers...',
     # example 1
     sequence = "AGACAUAGCGAUCAAGUGAUACCAGCAUCGUCUUGAUGCCCUUGGCAGCACUUCAUAGCUAGCUACG"
     theophylline_aptamer  = "GAUACCAG&CCCUUGGCAGC"
@@ -743,25 +780,22 @@ def tests():
     fold_result  = energy_model.RNAcentroid(sequence,aptamers=[theophylline_aptamer,streptavidin_aptamer], \
         aptamer_constraints=[theophylline_constraint,streptavidin_aptamer_structure],dG_ligands=[dG_theophylline,dG_streptavidin]) # now with the aptamer binding free energies
     assert [fold_result.structure, fold_result.energy] == ['....((((((((((((((((......)))).))))))(((...)))(((........)))((((.............((((.........)))))))).......)))))).................',-24.799999237060547]
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAcofold
     print 'Testing RNAcofold...',
     sequences    = ["CGCAGGGAUACCCGCG","GCGCCCAUAGGGACGC"]
     energy_model = PyVRNA()
     fold_result  = energy_model.RNAcofold(sequences)
-    assert [fold_result.structure, fold_result.energy] == ['.((.(((...))))).((((((...))).)))', -10.25 + energy_model.DuplexEnergyAdjustment(sequences)]
+    assert [fold_result.structure, fold_result.energy] == ['.((.(((...))))).&((((((...))).)))', -10.25 + energy_model.dG_init_adjustment]
     energy_model = None
     sequences    = ["GCGCACAUAGUGACGC","GCGCCCAUAGGGACGC"]
     constraints  = ["....xx....xx....","....xx....xx...."]
     energy_model = PyVRNA(dangles=1, gquad=False, parameter_file='rna_andronescu2007.par')
     fold_result  = energy_model.RNAcofold(sequences,constraints)
-    assert [fold_result.structure, fold_result.energy] == ['((((............))))............', -5.869999885559082 + energy_model.DuplexEnergyAdjustment(sequences)]
+    assert [fold_result.structure, fold_result.energy] == ['((((............&))))............', -5.869999885559082 + energy_model.dG_init_adjustment]
     energy_model = None
-    
-    # Add testcode for RNAcofold with aptamers
-
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAensemble
     print 'Testing RNAensemble...',
@@ -770,7 +804,7 @@ def tests():
     ensemble_result = energy_model.RNAensemble(sequence)
     assert [ensemble_result.structure, ensemble_result.energy] == ['(((.(((...||||||((((((.,.{||.||||||.|||...))))))}||}|}.,.))).)))', -39.47269058227539]
     energy_model = None
-    print 'everything works'
+    print 'Good.'
 
     print 'Testing ensemble: RNAensemble with aptamers...',
     # example 1
@@ -805,7 +839,7 @@ def tests():
     fold_result  = energy_model.RNAensemble(sequence,aptamers=[theophylline_aptamer,streptavidin_aptamer], \
         aptamer_constraints=[theophylline_constraint,streptavidin_aptamer_structure],dG_ligands=[dG_theophylline,dG_streptavidin]) # now with the aptamer binding free energies
     assert [fold_result.structure, fold_result.energy] == ['....((((((((((((((((......}))).))))))(((...))){((........)))((((.............((((.........)))))))).......)))))).,...............',-35.90715408325195]
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAeval
     print 'Testing RNAeval...',
@@ -817,10 +851,9 @@ def tests():
     sequences    = ['CGCAGGGAUACCCGCG','GCGCCCAUAGGGACGC']
     energy_model = PyVRNA(dangles=2, gquad=False, parameter_file='rna_andronescu2007.par')
     energy  = energy_model.RNAeval(sequences,['.((.(((...))))).','((((((...))).)))'])
-    assert float("{0:0.2f}".format(energy)) == -12.73
-
+    assert float("{0:0.2f}".format(energy)) == -12.72
     energy_model = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAfold
     print 'Testing RNAfold...',
@@ -835,7 +868,7 @@ def tests():
     fold_result  = energy_model.RNAfold(sequence, constraints)
     assert [fold_result.structure, fold_result.energy] == ['(((.(......).)))((((((...))).)))', -9.300000190734863]
     energy_model = None
-    print 'everything works'
+    print 'Good.'
 
     print 'Testing mfe: RNAfold with aptamers...',
     # example 1
@@ -870,7 +903,7 @@ def tests():
     fold_result  = energy_model.RNAfold(sequence,aptamers=[theophylline_aptamer,streptavidin_aptamer], \
         aptamer_constraints=[theophylline_constraint,streptavidin_aptamer_structure],dG_ligands=[dG_theophylline,dG_streptavidin]) # now with the aptamer binding free energies
     assert [fold_result.structure, fold_result.energy] == ['....((((((((((((((((......)))).))))))(((...)))(((........)))((((.............((((.........)))))))).......)))))).................',-34.95000076293945]
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAsubopt
     print 'Testing RNAsubopt...',
@@ -878,7 +911,8 @@ def tests():
     constraints = ["..xx........xx..","..xx........xx.."]
     delta_energy = 10
     energy_model = PyVRNA(dangles=0, gquad=False, parameter_file='rna_andronescu2007.par')
-    assert len(energy_model.RNAsubopt(sequences, constraints, delta_energy)) == 10196
+    subopt_list = energy_model.RNAsubopt(sequences, constraints, delta_energy)
+    assert len(subopt_list) == 10196
     energy_model = None
     sequence   = "CGCAGGGAUACCCGCG"
     delta_energy = 3
@@ -890,7 +924,9 @@ def tests():
                                                                 ('(((.((.....)))))', -3.5),
                                                                 ('.((.((.....)))).', -2.5999999046325684),
                                                                 ('....(((...)))...', -2.5999999046325684)]
-    print 'Testing RNAsubopt with aptamers'
+    print 'Good.'
+
+    print 'Testing RNAsubopt with aptamers...',
     sequence = "AGACAUAGCGAUCAAGUGAUACCAGCAUCGUCUUGAUGCCCUUGGCAGCACUUCAUAGCUAGCUACGAUGUAGCUCGGUAUUAUUU"
     theophylline_aptamer  = "GAUACCAG&CCCUUGGCAGC"
     theophylline_constraint = "(...((((&)...)))...)"
@@ -904,7 +940,7 @@ def tests():
     # assert subopt_result[0].structure == '......(((.((.(((((...((((((((.....)))))...)))...))))).)).)))(((((.....)))))...........'
     # assert subopt_result[0].energy == -21.5
     energy_model = None
-    print 'everything works'
+    print 'Good.'
 
 
     # Tests for vienna2bp and bp2vienna
@@ -937,14 +973,14 @@ def tests():
     vienna_string = '...((..((..))..((..))..))....((..((..))..(.)..))..'
     assert energy_model.bptuple2vienna(energy_model.vienna2bp(vienna_string)) == vienna_string
     energy_model  = None
-    print 'everything works'
+    print 'Good.'
 
 def legacy_tests():
     """
     Tests each function in ViennaRNA class
     """
     print ""
-    print "-=-=- ViennaRNA test suite -=-=-"
+    print "### === Testing ViennaRNA legacy class === ###"
 
     # Tests for centroid
     print 'Testing centroid...',
@@ -964,7 +1000,7 @@ def legacy_tests():
     assert [cntrd_result.structure, cntrd_result.energy] == [vienna_model['Centroid_bracket_string'], vienna_model["Centroid_energy"][0]] == ['(((.(((...))))))((((((...))).)))', -13.5]
     energy_model  = None
     vienna_model  = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for energy
     print 'Testing energy...',
@@ -983,10 +1019,10 @@ def legacy_tests():
     vienna_model = ViennaRNA(Sequence_List=sequences, material='rna_andronescu2007', Gquad=False)
     bp_tuple    = energy_model.vienna2bp("".join(structures))
     vienna_model.energy(strands=[0, 1], base_pairing_x=bp_tuple.bpx, base_pairing_y=bp_tuple.bpy, Temp=37.0, dangles="all")
-    assert float("{0:0.2f}".format(energy_model.RNAeval(sequences, structures))) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == -12.73
+    assert float("{0:0.2f}".format(energy_model.RNAeval(sequences, structures))) == float("{0:0.2f}".format(vienna_model["energy_energy"][0])) == -12.72
     energy_model = None
     vienna_model = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for mfe
     print 'Testing mfe: RNAfold...',
@@ -1005,14 +1041,14 @@ def legacy_tests():
     assert list(energy_model.RNAfold(sequence, constraints)) == [vienna_model["mfe_bracket_string"], vienna_model["mfe_energy"][0]] == ['(((.(......).)))((((((...))).)))', -9.300000190734863]
     energy_model = None
     vienna_model = None
-    print 'everything works'
+    print 'Good.'
     
     print 'Testing mfe: RNAcofold...',
     sequences    = ["CGCAGGGAUACCCGCG","GCGCCCAUAGGGACGC"]
     energy_model = PyVRNA()
     vienna_model = ViennaRNA(Sequence_List=sequences, material='rna_andronescu2007', Gquad=False)
     vienna_model.mfe(strands=[0, 1], constraints=None, Temp=37.0, dangles="all", outputPS=False, duplex=False)
-    assert list(energy_model.RNAcofold(sequences)) == [vienna_model["mfe_bracket_string"], vienna_model["mfe_energy"][0]] == ['.((.(((...))))).((((((...))).)))', -10.25 + energy_model.DuplexEnergyAdjustment(sequences)]
+    assert list(energy_model.RNAcofold(sequences)) == [vienna_model["mfe_bracket_string"], vienna_model["mfe_energy"][0]] == ['.((.(((...))))).&((((((...))).)))', -10.25 + energy_model.dG_init_adjustment]
     energy_model = None
     vienna_model = None
     sequences    = ["GCGCACAUAGUGACGC","GCGCCCAUAGGGACGC"]
@@ -1020,10 +1056,10 @@ def legacy_tests():
     energy_model = PyVRNA(dangles=1, gquad=False, parameter_file='rna_andronescu2007.par')
     vienna_model = ViennaRNA(Sequence_List=sequences, material='rna_andronescu2007', Gquad=False)
     vienna_model.mfe(strands=[0, 1], constraints=constraints[0]+constraints[1], Temp=37.0, dangles="some", outputPS=False, duplex=False)
-    assert list(energy_model.RNAcofold(sequences, constraints)) == [vienna_model["mfe_bracket_string"], vienna_model["mfe_energy"][0]] == ['((((............))))............', -5.869999885559082 + energy_model.DuplexEnergyAdjustment(sequences)]
+    assert list(energy_model.RNAcofold(sequences, constraints)) == [vienna_model["mfe_bracket_string"], vienna_model["mfe_energy"][0]] == ['((((............&))))............', -5.869999885559082 + energy_model.dG_init_adjustment]
     energy_model = None
     vienna_model = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for RNAsubopt
     print 'Testing subopt...',
@@ -1050,10 +1086,11 @@ def legacy_tests():
                                                                                                                                   -2.5999999046325684]
     energy_model = None
     vienna_model = None
-    print 'everything works'
+    print 'Good.'
 
     # Tests for convert_bracket_to_numbered_pairs and convert_numbered_pairs_to_bracket
-    print 'Testing convert_bracket_to_numbered_pairs and convert_numbered_pairs_to_bracket...',
+    print 'Testing convert_bracket_to_numbered_pairs ...'
+    print 'Testing convert_bracket_to_numbered_pairs ...',
     vienna_model  = ViennaRNA(Sequence_List=[], material='rna_turner2004', Gquad=False)
     vienna_string = '................................................................'
     assert vienna_model.convert_numbered_pairs_to_bracket(*vienna_model.convert_bracket_to_numbered_pairs(vienna_string)) == vienna_string
@@ -1082,7 +1119,7 @@ def legacy_tests():
     vienna_string = '...((..((..))..((..))..))....((..((..))..(.)..))..'
     assert vienna_model.convert_numbered_pairs_to_bracket(*vienna_model.convert_bracket_to_numbered_pairs(vienna_string)) == vienna_string
     vienna_model  = None
-    print 'everything works'
+    print 'Good.'
 
 if __name__ == '__main__':
     tests()
