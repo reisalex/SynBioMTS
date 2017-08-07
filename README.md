@@ -3,8 +3,6 @@ An automated model test system for DNA sequence-function models.
 
 `test-sfm` uses a database of over 16000 unique characterized genetic systems to run Python-wrapped sequence-function models, quantify model accuracy, accept or reject proposed mechanistic hypotheses, and identify sources of model error. This package is easily modifiable to expand the genetic system database, calculate additional statistical test metrics, and test new and improved gene expression models implemented in nearly any programming language.
 
-![test-sfm](model-test-system.png)
-
 ## Getting Started
 
 ### Dependencies
