@@ -102,7 +102,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos,start_energies):
     # Save dot-parentheses structure for initial state mRNA structure
     bpx = RBS.initial_structure['bp_x']
     bpy = RBS.initial_structure['bp_y']
-    viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
+    viennafld = RNAEnergyModel.bp2vienna(length=[len(RBS.sequence)],bpx=bpx, bpy=bpy)
     results['initial_structure'] = viennafld
 
     return results

@@ -494,14 +494,21 @@ def add_dataset(db,datasets):
             promoter = sheet.cell_value(i,0)
             TSS = int(sheet.cell_value(i,7))
             promoter_dict[promoter] = {}
-            promoter_dict[promoter]['SEQ'] = re.sub('[ \"]','',sheet.cell_value(i,9))
+            promoter_dict[promoter]["SEQ"] = re.sub('[ \"]','',sheet.cell_value(i,9))
             promoter_dict[promoter]["TSS"] = TSS
+
+        bad_promoters = ['"BBa_J23113"','"BBa_J23109"','"em7"']
+        for p in bad_promoters:
+            promoter_dict[p] = {'SEQ':"",'TSS':0}
 
         sheet = wb.sheet_by_name("RBSs")
         RBS_dict = {}
         for i in range(1,112):
             RBS = sheet.cell_value(i,0)
             RBS_dict[RBS] = (sheet.cell_value(i,9).replace(' ','').replace('"',''))[:-3]        
+
+        # add template RBS
+        RBS_dict['"em7"'] = ""
 
         # import Flow-seq required data to replicate calculations
         sheet = wb.sheet_by_name("NGS counts")
@@ -523,18 +530,18 @@ def add_dataset(db,datasets):
 
         # import dataset
         sheet = wb.sheet_by_index(0)
-
+        rowf = 12656
         ds = {
-            "PROMOTER.ID"   : sheet.col_values(colx=0, start_rowx=1, end_rowx=9337),
-            "RBS.ID"        : sheet.col_values(colx=1, start_rowx=1, end_rowx=9337),
+            "PROMOTER.ID"   : sheet.col_values(colx= 0, start_rowx=1, end_rowx=rowf),
+            "RBS.ID"        : sheet.col_values(colx= 1, start_rowx=1, end_rowx=rowf),
             "CDS"           : sheet.cell_value(1,85),
-            "COUNT.PROTEIN" : np.array(sheet.col_values(colx=3, start_rowx=1, end_rowx=9337)).astype(float),
-            "COUNT.A.RNA"   : np.array(sheet.col_values(colx=31, start_rowx=1, end_rowx=9337)),
-            "COUNT.B.RNA"   : np.array(sheet.col_values(colx=32, start_rowx=1, end_rowx=9337)),
-            "COUNT.RNA"     : np.array(sheet.col_values(colx=33, start_rowx=1, end_rowx=9337)),
-            "COUNT.A.DNA"   : np.array(sheet.col_values(colx=34, start_rowx=1, end_rowx=9337)),
-            "COUNT.B.DNA"   : np.array(sheet.col_values(colx=35, start_rowx=1, end_rowx=9337)),
-            "COUNT.DNA"     : np.array(sheet.col_values(colx=36, start_rowx=1, end_rowx=9337)),
+            "COUNT.PROTEIN" : sheet.col_values(colx= 3, start_rowx=1, end_rowx=rowf),
+            "COUNT.A.RNA"   : sheet.col_values(colx=58, start_rowx=1, end_rowx=rowf),
+            "COUNT.B.RNA"   : sheet.col_values(colx=59, start_rowx=1, end_rowx=rowf),
+            "COUNT.RNA"     : sheet.col_values(colx=60, start_rowx=1, end_rowx=rowf),
+            "COUNT.A.DNA"   : sheet.col_values(colx=34, start_rowx=1, end_rowx=rowf),
+            "COUNT.B.DNA"   : sheet.col_values(colx=35, start_rowx=1, end_rowx=rowf),
+            "COUNT.DNA"     : sheet.col_values(colx=36, start_rowx=1, end_rowx=rowf),
             "PROTEIN"       : "sfGFP",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
@@ -544,17 +551,31 @@ def add_dataset(db,datasets):
 
         # get contig counts from Flow-seq
         for b,col in zip(bin_list,range(4,16)):
-            ds[b] = np.array(sheet.col_values(colx=col, start_rowx=1, end_rowx=9337)).astype(float)
+            ds[b] = sheet.col_values(colx=col, start_rowx=1, end_rowx=rowf)
 
         ds["PROMOTER"] = [promoter_dict[ID]['SEQ'] for ID in ds["PROMOTER.ID"]]
-        ds["TSS"] = [promoter_dict[ID]['TSS'] for ID in ds["PROMOTER.ID"]]
-        ds["RBS"] = [RBS_dict[ID] for ID in ds['RBS.ID']]
-        ds["5pUTR"] = [p[TSS:]+RBS for p,TSS,RBS in zip(ds['PROMOTER'],ds['TSS'],ds['RBS'])]
+        ds["TSS"]      = [promoter_dict[ID]['TSS'] for ID in ds["PROMOTER.ID"]]
+        ds["RBS"]      = [RBS_dict[ID] for ID in ds['RBS.ID']]
+        ds["5pUTR"]    = [p[TSS:]+RBS for p,TSS,RBS in zip(ds['PROMOTER'],ds['TSS'],ds['RBS'])]
         ds["SEQUENCE"] = [UTR+ds["CDS"] for UTR in ds["5pUTR"]]
         ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
-        ds = run_FS_calcs(ds,data)
+        # convert to pandas dataframe
         df = pd.DataFrame(ds)
+
+        # remove entries corresponding to J23113, J23109, and EM7
+        df = df[~df['PROMOTER.ID'].isin(bad_promoters)]
+
+        # convert to numeric values, and remove entries that have NaNs
+        numbers = ["COUNT.PROTEIN","COUNT.A.RNA","COUNT.B.RNA","COUNT.RNA",
+                   "COUNT.A.DNA", "COUNT.B.DNA", "COUNT.DNA"]
+        numbers += bin_list
+        for label in numbers:
+            df[label] = pd.to_numeric(df[label],errors='coerce')
+        df = df.dropna(axis=0, how='any')
+
+        df = filter_Flowseq(df)
+        df = calc_Flowseq(df,data)
         db = db.append(df, ignore_index=True)
 
 
@@ -586,19 +607,20 @@ def add_dataset(db,datasets):
 
         # import dataset
         sheet = wb.sheet_by_name("Goodman_data")
+        rowf = 14235
         ds = {
-            "PROMOTER"      : sheet.col_values(colx=27, start_rowx=1, end_rowx=6598),
-            "TSS"           : [int(round(x)) for x in sheet.col_values(colx=24, start_rowx=1, end_rowx=6598)],
-            "RBS"           : sheet.col_values(colx=28, start_rowx=1, end_rowx=6598),
-            "CDS"           : sheet.col_values(colx=76, start_rowx=1, end_rowx=6598),
-            "N.TERMINAL.CDS": sheet.col_values(colx=1, start_rowx=1, end_rowx=6598),
-            "COUNT.PROTEIN" : np.array(sheet.col_values(colx=23, start_rowx=1, end_rowx=6598)).astype(float),
-            "COUNT.DNA"     : np.array(sheet.col_values(colx=3, start_rowx=1, end_rowx=6598)),
-            "COUNT.RNA"     : np.array(sheet.col_values(colx=4, start_rowx=1, end_rowx=6598)),
-            "COUNT.A.DNA"   : np.array(sheet.col_values(colx=5, start_rowx=1, end_rowx=6598)),
-            "COUNT.A.RNA"   : np.array(sheet.col_values(colx=6, start_rowx=1, end_rowx=6598)),
-            "COUNT.B.DNA"   : np.array(sheet.col_values(colx=7, start_rowx=1, end_rowx=6598)),
-            "COUNT.B.RNA"   : np.array(sheet.col_values(colx=8, start_rowx=1, end_rowx=6598)),
+            "PROMOTER"      : sheet.col_values(colx=27, start_rowx=1, end_rowx=rowf),
+            "TSS"           : [int(round(x)) if isinstance(x,float) else None for x in sheet.col_values(colx=24, start_rowx=1, end_rowx=rowf)],
+            "RBS"           : sheet.col_values(colx=28, start_rowx=1, end_rowx=rowf),
+            "CDS"           : sheet.col_values(colx=76, start_rowx=1, end_rowx=rowf),
+            "N.TERMINAL.CDS": sheet.col_values(colx= 1, start_rowx=1, end_rowx=rowf),
+            "COUNT.PROTEIN" : sheet.col_values(colx=23, start_rowx=1, end_rowx=rowf),
+            "COUNT.DNA"     : sheet.col_values(colx= 3, start_rowx=1, end_rowx=rowf),
+            "COUNT.RNA"     : sheet.col_values(colx= 4, start_rowx=1, end_rowx=rowf),
+            "COUNT.A.DNA"   : sheet.col_values(colx= 5, start_rowx=1, end_rowx=rowf),
+            "COUNT.A.RNA"   : sheet.col_values(colx= 6, start_rowx=1, end_rowx=rowf),
+            "COUNT.B.DNA"   : sheet.col_values(colx= 7, start_rowx=1, end_rowx=rowf),
+            "COUNT.B.RNA"   : sheet.col_values(colx= 8, start_rowx=1, end_rowx=rowf),
             "PROTEIN"       : "sfGFP",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
@@ -608,15 +630,29 @@ def add_dataset(db,datasets):
 
         # get contig counts from Flow-seq
         for b,col in zip(bin_list,range(4,16)):
-            ds[b] = np.array(sheet.col_values(colx=col, start_rowx=1, end_rowx=6598)).astype(float)
+            ds[b] = np.array(sheet.col_values(colx=col, start_rowx=1, end_rowx=rowf))
 
         ds["5pUTR"] = [p[TSS:]+RBS+N+"CAT" for p,TSS,RBS,N in \
                                  zip(ds['PROMOTER'],ds['TSS'],ds['RBS'],ds['N.TERMINAL.CDS'])]
         ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
-        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]        
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
 
-        ds = run_FS_calcs(ds,data)
+        # convert to pandas dataframe
         df = pd.DataFrame(ds)
+
+        # remove NA TSS entries
+        df = df[~df["TSS"].isnull()]
+
+        # convert to numeric values, and remove entries that have NaNs
+        numbers = ["COUNT.PROTEIN","COUNT.A.RNA","COUNT.B.RNA","COUNT.RNA",
+                   "COUNT.A.DNA", "COUNT.B.DNA", "COUNT.DNA"]
+        numbers += bin_list
+        for label in numbers:
+            df[label] = pd.to_numeric(df[label],errors='coerce')
+        df = df.dropna(axis=0, how='any')
+        
+        df = filter_Flowseq(df)
+        df = calc_Flowseq(df,data)
         db = db.append(df, ignore_index=True)
 
     # Clean up, define categories based on organism/host/dataset
@@ -647,7 +683,28 @@ def _remove_unicode(db):
             db[label] = db[label].str.encode('utf-8')
     return db
 
-def run_FS_calcs(ds,data):
+def filter_Flowseq(df):
+
+    # Remove poor quality data from the Flow-seq datasets
+    size0 = len(df)
+
+    # print df['BIN1']
+    # print df['COUNT.PROTEIN']
+
+    lowDNA = (df['COUNT.A.DNA']<10) | (df['COUNT.B.DNA']<10)
+    lowRNA = (df['COUNT.A.RNA']<10) | (df['COUNT.B.RNA']<10)
+    lowSEQ = (df['COUNT.DNA']<50) & (df['COUNT.RNA']<20)
+    lowPRO = df['COUNT.PROTEIN']<1000
+    loPROT = df['BIN1']/df['COUNT.PROTEIN']>0.025
+    hiPROT = df['BIN12']/df['COUNT.PROTEIN']>0.025
+    df = df[~(lowDNA | lowRNA | lowSEQ | lowPRO | loPROT | hiPROT)]
+
+    sizef = len(df)
+    print "Filtered out {} many poor quality sequences. Final dataset size: {}.".format(size0-sizef,sizef)
+
+    return df
+
+def calc_Flowseq(ds,data):
     
     # Calculate RNA levels from NGS data
     # Two replicates, A & B
@@ -678,17 +735,19 @@ def run_FS_calcs(ds,data):
         a[b] = (data['bins'][b]['cell_fraction']*ds[b]/ds['COUNT.PROTEIN'])/denominator
         ds["PROT.MEAN"] *= np.exp( a[b]*np.log(data['bins'][b]['fluo']) )
     
+    '''
     # Arithmetic mean of protein level
-    # ds["PROT.MEAN"] = np.zeros(num_seqs)
-    # for b in data['bin_list']:
-    #     ds["PROT.MEAN"] += a[b]*data['bins'][b]['fluo']
-    
+    ds["PROT.MEAN"] = np.zeros(num_seqs)
+    for b in data['bin_list']:
+        ds["PROT.MEAN"] += a[b]*data['bins'][b]['fluo']
+    '''
+
     # Variance & standard deviation of linear-scaled protein data
     var = 0.0
     for b in data['bin_list']:
-        var += a[b]*( data['bins'][b]['fluo'] - ds["PROT.MEAN"] )**2.0        
+        var += a[b]*( data['bins'][b]['fluo'] - ds["PROT.MEAN"] )**2.0
     ds["PROT.VAR"] = var
-    ds["PROT.STD"] = np.sqrt(ds["PROT.VAR"])    
+    ds["PROT.STD"] = np.sqrt(ds["PROT.VAR"])
     
     '''
     # Calculate variance on a log-scale

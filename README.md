@@ -87,47 +87,18 @@ if __name__ == "__main__":
 
 When you add models to the `Containers` object, you can specify arguments of the wrapped function. This comes in handy when you want to vary a parameter and test which is most accurate:
 ```python
-import RBS_Calculator_v2
-def RBSCalcv2(sequence,temperature,optimal_spacing):
-    rRNA = 'ACCTCCTTA'
-    model = RBS_Calculator_v2.RBS_Calculator(mRNA=sequence,rRNA=rRNA)
-    model.temp = temperature
-    model.optimal_spacing = optimal_spacing
-    model.run()
-    RBS = model.output() # simplified for the example
-
-    # Results should be returned as a dictionary
-    # The keys will become labels in the resulting pandas dataframe
-    results = {
-    'TIR': RBS.tir,
-    'dG_total': RBS.dG_total,
-    'dG_mRNA_rRNA': RBS.dG_mRNA_rRNA',
-    'dG_mRNA': RBS.dG_mRNA
-    }
-    return results
-
-if __name__ == "__main__":
-	
-    models = testsfm.interface.Container()
-	
-    # iterate over possible optimal_spacing values between 0 and 15
-    # add each model to models with a custom name and defined optimal_spacing of value s
-    allmodels = []
-    for s in range(0,16):
-        name = "RBSCalcv2-s={}.format(s)
-        models.add(alias=name,model=RBSCalcv2,optimal_spacing=s)
-        allmodels.append(name)
-	
-    # setform works on a list of models, in this case all of them
-    models.setform(allmodels,x='dG_total',y='PROT.MEAN',yScale='ln',a1=-0.45)
-	
-    testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db')
-    testsystem.run()
+for s in range(0,16):
+    name = "RBSCalcv2-s={}.format(s)
+    models.add(RBSCalcv2,optimal_spacing=s)
 ```
 
 You can specify filters to run predictions on a subset of genetic systems with shared properties:
 ```python
-filters = { 'ORGANISM': ['Escherichia coli'], 'DATASET': ['Beck_PLoS_2016','Salis_NBT_2009','Tian_NAR_2015']}
+filters = { 'ORGANISM': ['Escherichia coli'],
+            'DATASET' : ['Beck_PLoS_2016',
+                         'Salis_NBT_2009',
+                         'Tian_NAR_2015']
+}
 testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db',filters)
 ```
 

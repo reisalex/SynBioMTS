@@ -116,12 +116,34 @@ def RBSCalc_v2_1(sequence,rRNA,temp,startpos):
         # Save dot-parentheses structure for initial state mRNA structure
         bpx = RBS.initial_structure['bp_x']
         bpy = RBS.initial_structure['bp_y']
-        viennafld = RNAEnergyModel.bp2vienna(length=len(RBS.sequence),bpx=bpx, bpy=bpy)
+        viennafld = RNAEnergyModel.bp2vienna(length=[len(RBS.sequence)],bpx=bpx, bpy=bpy)
         results['initial_structure'] = viennafld
 
     return results
 
-if __name__ == "__main__":
+def StructureOnlyModel(sequence,startpos):
+
+    standby_seq = sequence[0:startpos-14]
+    post_footprint_seq = sequence[startpos+13:]
+
+    initial_state = RNAEnergyModel.RNAfold(sequence[:startpos+35])
+    dG_mRNA = initial_state.energy
+    initial_structure = initial_state.structure
+    dG_UTR_fold = RNAEnergyModel.RNAfold(standby_seq).energy
+    dG_after_footprint = RNAEnergyModel.RNAfold(post_footprint_seq).energy
+    dG_total = dG_UTR_fold + dG_after_footprint - dG_mRNA
+
+    results = {
+    'dG_total': dG_total,
+    'dG_UTR_fold': dG_UTR_fold,
+    'dG_after_footprint': dG_after_footprint,
+    'initial_structure': initial_structure
+    }
+
+    return results
+
+
+def test_Ecoli_hypotheses():
 
     # last 13 nt of Escherichia coli 16S rRNA sequence
     rRNA_16S_end = "GAUCACCUCCUUA"
@@ -140,7 +162,10 @@ if __name__ == "__main__":
                             'Salis_Nat_Biotech_2009',
                             'Farasat_MSB_2014',
                             'Tian_NAR_2015',
-                            'Bonde_NatMethods_IC_2016'],
+                            'Bonde_NatMethods_IC_2016',
+                            'Egbert_PNAS_2012',
+                            'Hecht_NAR_2017',
+                            'Beck_PLoS_2016'],
 
                 "ORGANISM": ['Escherichia coli str. K-12 substr. MG1655',
                              'Escherichia coli str. K-12 substr. DH10B',
@@ -149,7 +174,7 @@ if __name__ == "__main__":
 
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
-    
+
     # add models to interface.Models
     # model names are the tested 16S rRNA sequence
     models = testsfm.interface.Container()
@@ -161,8 +186,8 @@ if __name__ == "__main__":
 
     models.setform(modelNames, x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
-    customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=False)
-    customtest.run()
+    ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=False)
+    ModelTestSystem.run()
 
     for modelName in modelNames:
         ModelTestSystem.compare2models(modelNames=[modelName,'CCUCCU'])
@@ -174,3 +199,45 @@ if __name__ == "__main__":
         statsLabels = [x.strip('\n') for x in f.readlines()]
 
     ModelTestSystem.to_excel('RBS_Calc_16SrRNA_diff_lengths',predictLabels,statsLabels)
+
+def test_Bthetaiotaomicron_hypotheses():
+
+    ### === Bacteroides thetaiotaomicron hypothesis testing === ###
+
+    filters = {"DATASET": ['Mimee_Cell_Sys_2015']}
+    models = testsfm.interface.Container()
+
+    # default RBS Calculator model
+    models.add(RBSCalc_v2_1,rRNA='ACCUCCUUU')
+    models.changeName('RBSCalc_v2_1','RBSCalc_v2_1-9ntaSD')
+
+    # RBS Calculator using 13 nt 16S rRNA sequence
+    models.add(RBSCalc_v2_1,rRNA='GAACACCUCCUUU')
+    models.changeName('RBSCalc_v2_1','RBSCalc_v2_1-13ntaSD')
+
+    # Prediction using only ddG_structure
+    models.add(StructureOnlyModel)
+
+    modelNames = ['RBSCalc_v2_1-9ntaSD','RBSCalc_v2_1-13ntaSD','StructureOnlyModel']
+    models.setform(modelNames, x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
+
+    dbfilename = '../geneticsystems.db'
+    ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=True)
+    ModelTestSystem.run()    
+
+    for modelName in modelNames:
+        ModelTestSystem.compare2models(modelNames=[modelName,'RBSCalc_v2_1-9ntaSD'])
+
+    # Write model predictions and statistics to Excel
+    with open("labels/labels1.txt","r") as f:
+        predictLabels = [x.strip('\n') for x in f.readlines()]
+    with open("labels/labels_stats.txt","r") as f:
+        statsLabels = [x.strip('\n') for x in f.readlines()]
+
+    ModelTestSystem.to_excel('RBSCalc_16SrRNA_Btheta',predictLabels,statsLabels)    
+
+
+if __name__ == "__main__":
+
+    # test_Ecoli_hypotheses()
+    test_Bthetaiotaomicron_hypotheses()

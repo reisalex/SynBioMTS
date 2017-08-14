@@ -6,8 +6,9 @@ sys.path.append('../datasets')
 sys.path.append('/usr/local/lib/python2.7/site-packages/')
 
 import testsfm
+from testsfm import dbms
 import cPickle as pickle
-import TranslationRateModels as tl
+# import TranslationRateModels as tl
 
 # We're going to use shelve to store model predictions
 # as a dictionary-like persistance object of pandas dataframes
@@ -278,7 +279,7 @@ def _calc_warning_flags(RBS):
     return warning_dict
 
 
-if __name__ == "__main__":
+def main():
 
     # Add models to interface.Container()
     models = testsfm.interface.Container()
@@ -317,3 +318,39 @@ if __name__ == "__main__":
     # Initialize ModelTestSystem and run (automates model and stat calcs)
     ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=True)
     ModelTestSystem.run(filename='model_calcs.db')
+
+def data_for_RBSDesigner():
+
+    # Export information for RBS Designer
+    filters = { "DATASET": ['EspahBorujeni_NAR_2013',
+                        'EspahBorujeni_NAR_2015',
+                        'EspahBorujeni_JACS_2016',
+                        'EspahBorujeni_Footprint',
+                        'EspahBorujeni_Bsubtilis_2016',
+                        'Salis_Nat_Biotech_2009',
+                        'Farasat_MSB_2014',
+                        'Tian_NAR_2015',
+                        'Mimee_Cell_Sys_2015',
+                        'Bonde_NatMethods_IC_2016',
+                        'Egbert_PNAS_2012',
+                        'Hecht_NAR_2017',
+                        'Beck_PLoS_2016']
+    }
+
+    dbfilename = '../geneticsystems.db'
+    handle = open(dbfilename,'r')
+    database = pickle.load(handle)
+    handle.close()
+    database = dbms.filter(database,filters,False)
+
+    UTR = database['5pUTR'].tolist()
+    CDS = database['CDS'].tolist()
+    rRNA = [get_rRNA(organism) for organism in database['ORGANISM']]
+    assert len(UTR) == len(CDS) == len(rRNA)
+    assert type(UTR) == type(CDS) == type(rRNA) == list
+    pickle.dump((UTR,CDS,rRNA),open('data4RBSDesigner.p', 'wb'))
+
+if __name__ == "__main__":
+
+    # main()
+    data_for_RBSDesigner()

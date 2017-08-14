@@ -130,6 +130,8 @@ class ModelTest(object):
             self.predictions[model] = dfsave
             total += n
 
+
+
     def _wrap(self,bundle):
         ''' _wrap interprets the inputs of the interface.Model and pulls those values
         from the database; this method requires a tuple input for Python's map() function.'''
@@ -231,7 +233,6 @@ class ModelTest(object):
                 else:
                     # Run statistics and information theory calcs
                     # At least two data points required to run stats
-                    print m
                     data,yError = stats.linear_complete(x_valid,y_valid,xScale,yScale,self.models[m].a1)
 
                     # "place" yError into correct size array
@@ -371,6 +372,7 @@ class ModelTest(object):
             d.update(self.predictions)
         else:
             for model in self.models.available:
+                pass
                 # d[model] = dbms.udpate(d[model],self.predictions[model],self.identifiers)
                 
                 # ERROR, CODE NEEDS TO BE UPDATED HERE:
