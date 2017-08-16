@@ -215,6 +215,7 @@ class ModelTest(object):
                 indx = df["SUBGROUP"] == subgroup
                 x = np.array(df[self.models[m].x][indx])
                 y = np.array(df[self.models[m].y][indx])
+                std = np.array(df[self.models[m].std][indx])
 
                 # filter out no-prediction sequences (nan and inf values)
                 setsize = len(x)
@@ -222,18 +223,21 @@ class ModelTest(object):
                 count_invalid = np.sum(invalid)
                 x_valid = x[~invalid]
                 y_valid = y[~invalid]
+                std_valid = std[~invalid]
 
                 # Insufficient number of sequences in dataset or
                 # model was unable to predict more than two sequences
                 if (setsize - count_invalid < 2):
                     data = {}
+                    data["valid dataset"] = False
                     yErrorAll = np.nan*np.ones(setsize)
                     yPredicted = np.nan*np.ones(setsize)
                     
                 else:
                     # Run statistics and information theory calcs
                     # At least two data points required to run stats
-                    data,yError = stats.linear_complete(x_valid,y_valid,xScale,yScale,self.models[m].a1)
+                    data,yError = stats.linear_complete(x_valid,y_valid,std_valid,xScale,yScale,self.models[m].a1)
+                    data["valid dataset"] = True
 
                     # "place" yError into correct size array
                     yErrorAll = np.nan*np.ones(setsize)
@@ -260,6 +264,11 @@ class ModelTest(object):
                 data["Count.Invalid"] = count_invalid
                 data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"][indx],\
                                                           positions=df["STARTPOS"][indx])
+                
+                if data["valid dataset"]:
+                    data["MC"] = data["Sequence entropy"]*(data["N-states"]-1)*data["RIG"]
+                else:
+                    data["MC"] = 0.0
 
                 # Append data to entries
                 entries.append(data)
@@ -267,22 +276,30 @@ class ModelTest(object):
             # Calculate statistics for model {m} on ALL data
             x = allPredicted
             y = np.array(df[self.models[m].y])
+            std = np.array(df[self.models[m].std])
 
             setsize = len(x)
             invalid = np.isnan(x) + np.isinf(x) + (x == 0.0)
             count_invalid = np.sum(invalid)
             x_valid = x[~invalid]
             y_valid = y[~invalid]
+            std_valid = std[~invalid]
                 
             if (setsize - count_invalid > 1):
-                data,_ = stats.linear_simple(x_valid,y_valid,xScale=yScale,yScale=yScale)
+                data,_ = stats.linear_simple(x_valid,y_valid,std_valid,xScale=yScale,yScale=yScale)
+                data["valid dataset"] = True
             else:
                 data = {}
+                data["valid dataset"] = False
 
             data["SUBGROUP"] = "ALL"
             data["Count.Nan"] = count_invalid
             data["Sequence entropy"],_ = stats.sequence_entropy(df["SEQUENCE"],\
-                                                      positions=df["STARTPOS"])            
+                                                      positions=df["STARTPOS"])
+            if data["valid dataset"]:
+                data["MC"] = data["Sequence entropy"]*(data["N-states"]-1)*data["RIG"]
+            else:
+                data["MC"] = 0.0
             entries.append(data)
 
             self.statistics[m] = pandas.DataFrame(entries)

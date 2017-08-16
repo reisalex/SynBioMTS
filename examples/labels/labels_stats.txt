@@ -3,6 +3,7 @@ Pearson R-squared
 Pearson p
 Spearman R-squared
 Spearman p
+RMSE
 N-outliers
 Count.Nan
 slope
@@ -14,3 +15,8 @@ Normalized KL-divergence
 KL-divergence
 Max KL-divergence
 Sequence entropy
+N-states
+CV
+RIG
+MC
+AUROC

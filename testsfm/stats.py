@@ -197,12 +197,12 @@ def area_under_ROC_curve(predictions,observations,cutoff=None,n=50):
     # preallocate arrays and define n-many threshodls
     fpr = np.zeros(n)
     tpr = np.zeros(n)
-    thresholds = np.linspace(min(observations)-2,max(observations)+2,n)
+    thresholds = np.linspace(0.9*min(observations),1.1*max(observations),n)
 
     for i in xrange(0,n):
 
         threshold = thresholds[i]
-        scores = prediction > threshold
+        scores = predictions > threshold
 
         # calculate confusion matrix
         a = sum(scores & outcomes)
@@ -214,13 +214,34 @@ def area_under_ROC_curve(predictions,observations,cutoff=None,n=50):
         fpr[i] = b/(b+d)
         tpr[i] = a/(a+c)
 
-    # Add (0,0) and (1,1) data points if not captured by thresholds
-    # Sort fpr and tpr arrays
+    # Remove nans
+    nans = np.isnan(fpr) + np.isnan(tpr)
+    x = np.array(fpr)
+    y = np.array(tpr)
+    x = x[~nans]
+    y = y[~nans]
 
-    # Could also use scikit learn roc_curve and roc_auc_score functions
-    # sklearn.metrics.roc_curve
+    # Sort by increasing x
+    indx = np.argsort(x)
+    x = x[indx]
+    y = y[indx]
+
+    # Remove repeated elements
+    x,indx = np.unique(x,return_index=True)
+    y = y[indx]
+
+    # Add (0,0) or (1,1) if not present!
+    if x[0]!=0.0:
+        x = np.append([0.0],x)
+        y = np.append([0.0],y)
+
+    if x[-1]!=1.0:
+        x = np.append(x,1.0)
+        y = np.append(y,1.0)
 
     # Calculate area under the ROC curve
+    fpr = x
+    tpr = y
     auroc = np.trapz(tpr,fpr)
 
     return auroc,fpr,tpr,thresholds
@@ -338,6 +359,7 @@ def sequence_entropy(sequences,align="left",positions=None):
     if any([exp.match(seq) is None for seq in sequences]):
         raise ValueError("Invalid letters found in sequences. Only ATGCU accepted.")
 
+    nseqs = len(sequences)
     maxseqlen = max([len(seq) for seq in sequences])
     samelen   = all([len(sequences[0])==len(seq) for seq in sequences[1:]])
 
@@ -372,7 +394,7 @@ def sequence_entropy(sequences,align="left",positions=None):
         for i,c in enumerate(seq):
             counts[c][i] += 1
     
-    pkList = [[counts[c][i]/maxseqlen for c in alphabet] for i in xrange(maxseqlen)]
+    pkList = [[counts[c][i]/nseqs for c in alphabet] for i in xrange(maxseqlen)]
 
     # calculate Shannon entropy at each position and total Shannon entropy (hseq)
     S = [entropy(pk,base=2) for pk in pkList]
@@ -380,18 +402,18 @@ def sequence_entropy(sequences,align="left",positions=None):
 
     return Hseq,S
 
-def linear_complete(xVals,yVals,xScale='linear',yScale='linear',slope=None):
+def linear_complete(xVals,yVals,ystd,xScale='linear',yScale='linear',slope=None):
 
     # Useful lambda functions
     calc_x = lambda a0,a1,y: (y-a0)/a1
     calc_y = lambda a0,a1,x: a1*x+a0
 
-    if yScale == 'log10':    yVals = np.log10(yVals)
+    if   yScale == 'log10':  yVals = np.log10(yVals)
     elif yScale == 'ln':     yVals = np.log(yVals)
     elif yScale == 'linear': pass
     else: raise ValueError("Invalid input in ModelTest._linear_model_stats for yScale: {}".format(yScale))
 
-    if xScale == 'log10':    xVals = np.log10(xVals)
+    if   xScale == 'log10':  xVals = np.log10(xVals)
     elif xScale == 'ln':     xVals = np.log(xVals)
     elif xScale == 'linear': pass
     else: raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))    
@@ -410,23 +432,72 @@ def linear_complete(xVals,yVals,xScale='linear',yScale='linear',slope=None):
     app_xVals = calc_x(a0,a1,yVals)
     y_predicted = calc_y(a0,a1,xVals)
 
-    if yScale == 'log10': yError = 10**(yVals)/10**(y_predicted)
-    elif yScale == 'ln':  yError = np.exp(yVals)/np.exp(y_predicted)
+    residuals = yVals - y_predicted
+
+    if yScale == 'log10': yError = 10**(residuals)
+    elif yScale == 'ln':  yError = np.exp(residuals)
     else:                 yError = yVals/y_predicted
 
-    # Calculate Pearson/Spearman correlation coefficients
-    (R,Pearson_p) = correlation(xVals,app_xVals)
-    (rho,Spearman_p) = correlation(xVals,app_xVals)
+    # Pearson/Spearman correlation coefficients
+    (R,Pearson_p) = correlation(y_predicted,yVals)
+    (rho,Spearman_p) = correlation(y_predicted,yVals)
 
-    # Calculate one-sided model error cdfs
+    # Root Mean Square Error (RMSE)
+    # n = len(yVals)
+    # SSE = np.sum(res**2.0 for res in residuals)
+    # RMSE = np.sqrt(SSE/n)
+    RMSE = np.sqrt(1-R**2.0)*np.std(yVals)
+
+    # One-sided model error cdfs
     yError1 = list(yError)
     indx = yError1 < 1
     yError1[indx] = 1/yError1[indx]
     bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
     onesided_cdf,_ = empirical_cdf(yError1,bins)
 
-    # Calculate Kullback-Leibler divergence
+    # Kullback-Leibler divergence
     (NKLdiv,KLdiv,KLdivmax) = normKLdiv(yError,b=4)
+
+    # AUC ROC
+    threshold = (max(yVals) + min(yVals))/2.0
+    auroc,fpr,tpr,thresholds = area_under_ROC_curve(y_predicted,yVals,cutoff=threshold)
+
+    # Relative information gain (RIG) over uniform model
+    # remove nans from ystd
+    # if len(ystd)==0, then skip information theory analysis
+    ystd = np.array(ystd, dtype=np.float64)
+    nans = np.isnan(ystd)
+    ystd = ystd[~nans]
+    yVals = yVals[~nans]
+
+    if len(ystd)==0:
+        CV = 0.0
+        N = 0.0
+        RIG = 0.0
+    else:
+        if   yScale == 'log10': ystd = np.log10(ystd)
+        elif yScale == 'ln':    ystd = np.log(ystd)
+        else: pass
+
+        nonzero = np.nonzero(ystd*yVals)
+        ystd = ystd[nonzero]
+        yVals = yVals[nonzero]
+
+        negative = (yVals < 0.0) + (ystd < 0.0)
+        CV = np.mean(ystd[~negative]/yVals[~negative])
+        N = int(np.floor((max(yVals) - min(yVals))/CV))
+        edges = np.linspace(-4,4,N+1)
+        # filter out residuals that don't fall in the bins
+        rmv = (residuals < edges[0]) + (residuals > edges[-1])
+        residuals = residuals[~rmv]
+
+        [dist,_] = np.histogram(residuals,edges,density=True)
+        dist_model = dist[dist!=0.0]
+        Hmodel = entropy(dist_model)
+        dist = np.ones(N)/N;
+        Hrandom = entropy(dist)
+        RIG = 1 - Hmodel/Hrandom
+    # WARNING yVals and y_predicted have been modified after MC calculations
 
     results = {
     "Pearson R-squared": R**2.0,
@@ -441,12 +512,17 @@ def linear_complete(xVals,yVals,xScale='linear',yScale='linear',slope=None):
     "10-fold Error": onesided_cdf[9],
     "Normalized KL-divergence": NKLdiv,
     "KL-divergence": KLdiv,
-    "Max KL-divergence": KLdivmax
+    "Max KL-divergence": KLdivmax,
+    "RMSE": RMSE,
+    "RIG": RIG,
+    "N-states": N,
+    "CV": CV,
+    "AUROC": auroc
     }
 
     return results,yError
 
-def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
+def linear_simple(xVals,yVals,ystd,xScale='linear',yScale='linear'):
 
     if yScale == 'log10':    yVals = np.log10(yVals)
     elif yScale == 'ln':     yVals = np.log(yVals)
@@ -458,11 +534,18 @@ def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
     elif xScale == 'linear': pass
     else: raise ValueError("Invalid input in ModelTest._linear_model_stats for xScale: {}".format(xScale))    
 
-    # Calculate Pearson/Spearman correlation coefficients
+    # Pearson/Spearman correlation coefficients
     (R,Pearson_p) = correlation(xVals,yVals)
     (rho,Spearman_p) = correlation(xVals,yVals)
 
-    # Calculate one-sided model error cdfs
+    # Root Mean Square Error (RMSE)
+    residuals = yVals - xVals
+    # n = len(yVals)
+    # SSE = np.sum(res**2.0 for res in residuals)
+    # RMSE = np.sqrt(SSE/n)
+    RMSE = np.sqrt(1-R**2.0)*np.std(yVals)
+
+    # One-sided model error cdfs
     yError = yVals/xVals
     yError1 = list(yError)
     indx = yError1 < 1
@@ -470,10 +553,57 @@ def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
     bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
     onesided_cdf,_ = empirical_cdf(yError1,bins)
 
-    # Calculate Kullback-Leibler divergence
+    # Kullback-Leibler divergence
     (NKLdiv,KLdiv,KLdivmax) = normKLdiv(yError,b=4)
+
+    # AUC ROC
+    threshold = (max(yVals) + min(yVals))/2.0
+    auroc,fpr,tpr,thresholds = area_under_ROC_curve(xVals,yVals,cutoff=threshold)
+
+    print " "
+    for x,y in zip(fpr,tpr):
+        print x,y
+    print " "
+
+    # Relative entropy gain over uniform model
+    # Relative information gain (RIG) over uniform model
+    # remove nans from ystd
+    # if len(ystd)==0, then skip information theory analysis
+    ystd = np.array(ystd, dtype=np.float64)
+    nans = np.isnan(ystd)
+    ystd = ystd[~nans]
+    yVals = yVals[~nans]
     
-    # Calculate number of outliers
+    if len(ystd)==0:
+        CV = 0.0
+        N = 0.0
+        RIG = 0.0
+    else:
+        if   yScale == 'log10': ystd = np.log10(ystd)
+        elif yScale == 'ln':    ystd = np.log(ystd)
+        else: pass
+
+        nonzero = np.nonzero(ystd*yVals)
+        ystd = ystd[nonzero]
+        yVals = yVals[nonzero]
+
+        negative = (yVals < 0.0) + (ystd < 0.0)
+        CV = np.mean(ystd[~negative]/yVals[~negative])
+        N = int(np.floor((max(yVals) - min(yVals))/CV))
+        edges = np.linspace(-4,4,N+1)
+        # filter out residuals that don't fall in the bins
+        rmv = (residuals < edges[0]) + (residuals > edges[-1])
+        residuals = residuals[~rmv]
+
+        [dist,_] = np.histogram(residuals,edges,density=True)
+        dist_model = dist[dist!=0.0]
+        Hmodel = entropy(dist_model)
+        dist = np.ones(N)/N;
+        Hrandom = entropy(dist)
+        RIG = 1 - Hmodel/Hrandom
+    # WARNING yVals and y_predicted have been modified after MC calculations
+
+    # Number of outliers
     outliers = find_outliers(yError)
 
     results = {
@@ -487,7 +617,12 @@ def linear_simple(xVals,yVals,xScale='linear',yScale='linear'):
     "10-fold Error": onesided_cdf[9],
     "Normalized KL-divergence": NKLdiv,
     "KL-divergence": KLdiv,
-    "Max KL-divergence": KLdivmax
+    "Max KL-divergence": KLdivmax,
+    "RMSE": RMSE,
+    "RIG": RIG,
+    "N-states": N,
+    "CV": CV,
+    "AUROC": auroc
     }
 
     return results,yError
