@@ -33,7 +33,7 @@ class ModelTest(object):
     # identifiers is used to uniquely identify sequence entries
     identifiers = ["SEQUENCE","SUBGROUP"]
 
-    def __init__(self,models,dbfilename,filters={},recalc=False,add_data=True,nprocesses=mp.cpu_count(),verbose=False):
+    def __init__(self,models,dbfilename,filters={},recalc=False,add_data=True,nprocesses=(mp.cpu_count()-1),verbose=False):
         '''Inputs:
         models (interface.Container)  = see interface.Container
         dbfilename (string)           = filename of the geneticsystems database

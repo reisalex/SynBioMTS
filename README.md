@@ -13,6 +13,9 @@ Python packages used are listed below. You can install the first three packages 
 * [scikit-learn](http://scikit-learn.org/stable/install.html) - Machine learning
 
 #### Optional
+
+* [WebLogo](https://github.com/WebLogo/weblogo) - We've wrapped the WebLogo python API so that you can easily generate weblogos for your sequence datasets.
+
 [ViennaRNA](https://www.tbi.univie.ac.at/RNA/) - A C code library for the prediction and comparison of RNA secondary structures. ViennaRNA is wrapped with /models/PyVRNA.py for use in modeling and machine learning analysis.
 
 ### Installing

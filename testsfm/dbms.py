@@ -1,3 +1,10 @@
+"""
+Custom database management system built using pandas library
+
+Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
+
+"""
+
 import pandas as pd
 import numpy as np
 
@@ -24,7 +31,7 @@ def update(db1,db2,identifiers):
 
     return db1
 
-def filter(database,kargs,ordered):
+def filter(database,kargs,ordered=False):
     '''Use to filter a pandas dataframe to get subset with kargs
     Input:  database (pandas dataframe)
             kargs (dictionary)  :: keys=database label, values=a list of filter values
@@ -33,7 +40,7 @@ def filter(database,kargs,ordered):
     Output: Database filtered to only include kargs'''
     return database[get_indexes(database,kargs,ordered)]
 
-def remove(database,kargs,ordered):
+def remove(database,kargs,ordered=False):
     '''Use to filter a pandas dataframe to exclude entries that match kargs
     Input:  database (pandas dataframe)
             kargs (dictionary)  :: keys=database label, values=a list of filter values
@@ -42,7 +49,7 @@ def remove(database,kargs,ordered):
     Output: Database filtered to remove kargs'''
     return database[~get_indexes(database,kargs,ordered)]
 
-def get_indexes(database,kargs,ordered,allqueries=False):
+def get_indexes(database,kargs,ordered=False,allqueries=False):
     '''Gets indexes for values in database that match kargs'''
     assert isinstance(ordered,bool), "Argument, ordered, should be a boolean. Type given = {}".format(type(ordered))
     kargs = {k.upper(): v for k,v in kargs.iteritems()}

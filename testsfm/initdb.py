@@ -543,6 +543,7 @@ def add_dataset(db,datasets):
             "COUNT.B.DNA"   : sheet.col_values(colx=35, start_rowx=1, end_rowx=rowf),
             "COUNT.DNA"     : sheet.col_values(colx=36, start_rowx=1, end_rowx=rowf),
             "PROTEIN"       : "sfGFP",
+            "PLASMID"       : "pEGRC",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
@@ -622,6 +623,7 @@ def add_dataset(db,datasets):
             "COUNT.B.DNA"   : sheet.col_values(colx= 7, start_rowx=1, end_rowx=rowf),
             "COUNT.B.RNA"   : sheet.col_values(colx= 8, start_rowx=1, end_rowx=rowf),
             "PROTEIN"       : "sfGFP",
+            "PLASMID"       : "pEGRC",
             "ORGANISM"      : "Escherichia coli str. K-12 substr. MG1655",
             "METHOD"        : "Flow-seq",
             "TEMP"          : 30.0,
@@ -797,7 +799,7 @@ if __name__ == "__main__":
 
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
-    
+
     handle = open('../geneticsystems.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()
