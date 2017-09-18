@@ -1,7 +1,7 @@
 # SynBioMTS
 An automated model test system for synthetic biology models of gene expression and regulation.
 
-`test-sfm` uses a database of over 16000 unique characterized genetic systems to run Python-wrapped sequence-function models, quantify model accuracy, accept or reject proposed mechanistic hypotheses, and identify sources of model error. This package is easily modifiable to expand the genetic system database, calculate additional statistical test metrics, and test new and improved gene expression models implemented in nearly any programming language.
+`synbiomts` uses a database of over 16000 unique characterized genetic systems to run Python-wrapped sequence-function models, quantify model accuracy, accept or reject proposed mechanistic hypotheses, and identify sources of model error. This package is easily modifiable to expand the genetic system database, calculate additional statistical test metrics, and test new and improved gene expression models implemented in nearly any programming language.
 
 ## Getting Started
 
@@ -21,19 +21,19 @@ Python packages used are listed below. You can install the first three packages 
 ### Installing
 Install with the following:
 ```
-git clone https://github.com/reisalex/test-sfm
-cd test-sfm
+git clone https://github.com/reisalex/SynBioMTS
+cd SynBioMTS
 sudo python setup.py install
 ```
 The model test system can then be imported in Python:
 ```python
-import testsfm
+import synbiomts
 ```
 
 ### Usage
-If you would like to use the provided genetic system database, the best way is to navigate to /testsfm, and run the database initialization module (initdb.py):
+If you would like to use the provided genetic system database, the best way is to navigate to /synbiomts, and run the database initialization module (initdb.py):
 ```
-cd /testsfm
+cd /synbiomts
 python initdb.py
 ```
 
@@ -45,7 +45,7 @@ To use the model test system:
 5. Run model calculations and statistics with `run`.
 
 ```python
-import testsfm
+import synbiomts
 
 # Wrap the model with a function
 import RBS_Calculator_v2
@@ -69,7 +69,7 @@ def RBSCalcv2(sequence,temperature):
 if __name__ == "__main__":
     
     # create models Container object
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     
     # add the model(s)
     models.add(RBSCalcv2)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     models.setform(['RBSCalcv2'],x='dG_total',y='PROT.MEAN',yScale='ln',a1=-0.45)
     
     # create test system object
-    testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db')
+    testsystem = synbiomts.analyze.ModelTest(models,'geneticsystems.db')
     
     # run model predictions and statistics calculations 
     testsystem.run()
@@ -102,12 +102,12 @@ filters = { 'ORGANISM': ['Escherichia coli'],
                          'Salis_NBT_2009',
                          'Tian_NAR_2015']
 }
-testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db',filters)
+testsystem = synbiomts.analyze.ModelTest(models,'geneticsystems.db',filters)
 ```
 
 The model test system uses multiprocessing, with the number of available CPUs by default, to run model predictions. You can specify the number of processes to force single process or specify a desired number:
 ```python
-testsystem = testsfm.analyze.ModelTest(models,'geneticsystems.db',nprocesses=1)
+testsystem = synbiomts.analyze.ModelTest(models,'geneticsystems.db',nprocesses=1)
 ```
 
 The `run` method calculates both model predictions and calculates statistics. If you only want to run model predictions, you can use `predict`:
@@ -127,7 +127,7 @@ By default, the model test system will run statistics assuming the model predict
 
 If you want to run futher statistics, you can import the stats module:
 ```python
-from testsfm import stats
+from synbiomts import stats
 ```
 You can always add additional stats functions as needed.
 
@@ -154,6 +154,6 @@ test.to_excel('filename',predictLabels,statsLabels)
 
 Thanks to Howard M Salis (Penn State), Iman Farasat (Merck), Amin Espah Borujeni (MIT), Tian Tian (JBEI), Daniel Goodman (Harvard), Sri Kosuri (UCLA), Robert Egbert (Berkeley), Mark Mimee (MIT), and Heather Beck (Vienna) for providing high quality characterization data. A special thanks to Daniel Goodman for discussion on Flow-seq and for providing additional information on the 2013 Flow-seq datasets.
 
-If you use `test-sfm`, please cite:
+If you use `synbiomts`, please cite:
 
 Alexander C. Reis, and Howard M. Salis. An automated model test system for systematic development and improvement of gene expression models, In Preparation (2017).
