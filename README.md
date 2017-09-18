@@ -33,7 +33,7 @@ import synbiomts
 ### Usage
 If you would like to use the provided genetic system database, the best way is to navigate to /synbiomts, and run the database initialization module (initdb.py):
 ```
-cd /synbiomts
+cd synbiomts
 python initdb.py
 ```
 
