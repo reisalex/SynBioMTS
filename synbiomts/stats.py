@@ -8,7 +8,6 @@ Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 from __future__ import division
 import re
 import numpy as np
-import sklearn
 import scipy
 import scipy.stats
 
@@ -109,22 +108,6 @@ def fit_linear_model(x,y,slope=None):
         res = scipy.optimize.minimize(LSQ,x0=1,bounds=None)
         (m,b) = (slope,res.x[0])
     return (m,b)
-
-def ANOVA(X,y,coeffs):
-    '''Univariate linear regression tests
-    Quick linear model for sequentially testing the effect of many regressors
-    Using scikit learn's Feature selection toolbox
-    Returns:
-        F (array) = F-values for regressors
-        pvalues (array) = p-values for F-scores'''
-
-    # Compute regressors as product of predictors and the coeffs of a model
-    (m,n) = np.shape(X)
-    M = np.transpose( [list(coeffs)*m] )
-    mX = np.multipy(M,X)
-
-    (F,pvalues) = sklearn.feature_selection.f_regression(mX,y)
-    return (F,pvalues)
 
 def mad(x):
     '''Median absolute deviation

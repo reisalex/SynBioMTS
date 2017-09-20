@@ -21,6 +21,23 @@ from sklearn.feature_selection import RFE # recursive feature eliminiation
 # http://scikit-learn.org/stable/modules/feature_selection.html#removing-features-with-low-variance
 from sklearn.feature_selection import VarianceThreshold
 
+from sklearn.feature_selection import f_regression
+def ANOVA(X,y):
+    '''Univariate linear regression tests
+    Quick linear model for sequentially testing the effect of many regressors
+    Using scikit learn's Feature selection toolbox
+    Returns:
+        F (array) = F-values for regressors
+        pvalues (array) = p-values for F-scores'''
+
+    # (m,n) = np.shape(X)
+    # M = np.transpose( [list(coeffs)*m] )
+    # mX = np.multipy(M,X)
+
+    (F,pvalues) = f_regression(X,y)
+    return (F,pvalues)
+
+
 # Pipeline
 # http://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline
 from sklearn.pipeline import Pipeline
