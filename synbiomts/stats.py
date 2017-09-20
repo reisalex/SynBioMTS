@@ -1,5 +1,5 @@
 """
-Custom statistics module for test-sfm
+Custom statistics module for SynBioMTS
 
 Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 

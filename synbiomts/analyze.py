@@ -1,5 +1,5 @@
 """
-Main classes for test-sfm module
+Main classes for SynBioMTS module
 
 Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 

@@ -1,6 +1,6 @@
 
 import cPickle as pickle
-from testsfm import (dbms,graphics)
+from synbiomts import (dbms,graphics)
 
 handle = open('../geneticsystems.db','r')
 database = pickle.load(handle)

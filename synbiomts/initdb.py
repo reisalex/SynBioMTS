@@ -575,8 +575,8 @@ def add_dataset(db,datasets):
             df[label] = pd.to_numeric(df[label],errors='coerce')
         df = df.dropna(axis=0, how='any')
 
-        df = filter_Flowseq(df)
         df = calc_Flowseq(df,data)
+        df = filter_Flowseq(df)
         db = db.append(df, ignore_index=True)
 
 
@@ -653,8 +653,8 @@ def add_dataset(db,datasets):
             df[label] = pd.to_numeric(df[label],errors='coerce')
         df = df.dropna(axis=0, how='any')
         
-        df = filter_Flowseq(df)
         df = calc_Flowseq(df,data)
+        df = filter_Flowseq(df)
         db = db.append(df, ignore_index=True)
 
     # Clean up, define categories based on organism/host/dataset
@@ -690,15 +690,14 @@ def filter_Flowseq(df):
     # Remove poor quality data from the Flow-seq datasets
     size0 = len(df)
 
-    # print df['BIN1']
-    # print df['COUNT.PROTEIN']
-
     lowDNA = (df['COUNT.A.DNA']<10) | (df['COUNT.B.DNA']<10)
     lowRNA = (df['COUNT.A.RNA']<10) | (df['COUNT.B.RNA']<10)
     lowSEQ = (df['COUNT.DNA']<50) & (df['COUNT.RNA']<20)
     lowPRO = df['COUNT.PROTEIN']<1000
-    loPROT = df['BIN1']/df['COUNT.PROTEIN']>0.025
-    hiPROT = df['BIN12']/df['COUNT.PROTEIN']>0.025
+    loPROT = df['PROT.MEAN'] < 1584
+    hiPROT = df['BIN12']/df['COUNT.PROTEIN'] > 0.95
+    # loPROT = df['BIN1']/df['COUNT.PROTEIN']>0.025
+    # hiPROT = df['BIN12']/df['COUNT.PROTEIN']>0.025
     df = df[~(lowDNA | lowRNA | lowSEQ | lowPRO | loPROT | hiPROT)]
 
     sizef = len(df)

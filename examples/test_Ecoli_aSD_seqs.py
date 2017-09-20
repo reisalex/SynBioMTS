@@ -5,7 +5,7 @@ sys.path.append('../models')
 # sys.path.append('../datasets')
 # sys.path.append('/usr/local/lib/python2.7/site-packages/')
 
-import testsfm
+import synbiomts
 import cPickle as pickle
 # import TranslationRateModels as tl
 
@@ -177,7 +177,7 @@ def test_Ecoli_hypotheses():
 
     # add models to interface.Models
     # model names are the tested 16S rRNA sequence
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     modelNames = []
     for (rRNA,pos,length) in candidates:
         models.add(model=RBSCalc_v2_1,rRNA=rRNA)
@@ -186,7 +186,7 @@ def test_Ecoli_hypotheses():
 
     models.setform(modelNames, x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
-    ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=False)
+    ModelTestSystem = synbiomts.analyze.ModelTest(models,dbfilename,filters,verbose=False)
     ModelTestSystem.run()
 
     for modelName in modelNames:
@@ -205,7 +205,7 @@ def test_Bthetaiotaomicron_hypotheses():
     ### === Bacteroides thetaiotaomicron hypothesis testing === ###
 
     filters = {"DATASET": ['Mimee_Cell_Sys_2015']}
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
 
     # default RBS Calculator model
     models.add(RBSCalc_v2_1,rRNA='ACCUCCUUU')
@@ -222,7 +222,7 @@ def test_Bthetaiotaomicron_hypotheses():
     models.setform(modelNames, x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
     dbfilename = '../geneticsystems.db'
-    ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=True)
+    ModelTestSystem = synbiomts.analyze.ModelTest(models,dbfilename,filters,verbose=True)
     ModelTestSystem.run()    
 
     for modelName in modelNames:

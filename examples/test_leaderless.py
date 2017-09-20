@@ -1,5 +1,5 @@
 
-import testsfm
+import synbiomts
 import cPickle as pickle
 
 # We're going to use shelve to store model predictions
@@ -119,13 +119,13 @@ if __name__ == "__main__":
     dbfilename = '../geneticsystems.db'
 
     # add models to interface.Container
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     models.add(RBSCalc_v2_1)
     modelName = 'RBSCalc_v2_1'
     models.setform([modelName], x='dG_total', y='PROT.MEAN', yScale='ln', a1=-0.45)
 
-    # customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,nprocesses=1,verbose=True)
-    test = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
+    # customtest = synbiomts.analyze.ModelTest(models,dbfilename,filters,nprocesses=1,verbose=True)
+    test = synbiomts.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
     test.predict()
 
     with open("labels/labels1.txt","r") as f:

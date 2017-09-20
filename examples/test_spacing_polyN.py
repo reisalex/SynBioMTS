@@ -1,5 +1,5 @@
 
-import testsfm
+import synbiomts
 import cPickle as pickle
 
 # We're going to use shelve to store model predictions
@@ -108,7 +108,7 @@ def RBSCalc_v2_1(sequence,organism,temp,startpos):
 if __name__ == "__main__":
 
     # add models to interface.Container
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     models.add(RBSCalc_v2_1)
     models.setform(["RBSCalc_v2_1"], x="dG_total", y="PROT.MEAN", yScale='ln', a1=-0.45)
 
@@ -118,8 +118,8 @@ if __name__ == "__main__":
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
 
-    # customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
-    customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
+    # customtest = synbiomts.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
+    customtest = synbiomts.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
     customtest.run()
 
     # Let's explore model error!

@@ -6,7 +6,7 @@ Auxiliary Functions Specific to Predicting Translation Rates
 Copyright 2017 Alexander C. Reis, Howard M. Salis, all rights reserved.
 
 """
-# Import testsfm and datasets
+# Import synbiomts and datasets
 import sys, os
 sys.path.append('../') #top-level directory
 sys.path.append('../../') #DNAc 
@@ -16,7 +16,7 @@ cwd = os.getcwd()
 
 print cwd
 
-import testsfm
+import synbiomts
 import cPickle as pickle
 
 # We're going to use shelve to store model predictions

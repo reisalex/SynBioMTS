@@ -1,5 +1,5 @@
 
-import testsfm
+import synbiomts
 import cPickle as pickle
 
 # We're going to use shelve to store model predictions
@@ -135,19 +135,19 @@ if __name__ == "__main__":
     }
 
     # add models to interface.Container
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     models.add(RBSCalc_v2_1,start_energies=dG_start_INN)
     modelName = 'RBSCalc_v2_1'
     models.setform([modelName], x='dG_total', y='PROT.MEAN', yScale='ln', a1=-0.45)
 
-    # customtest = testsfm.analyze.ModelTest(models,dbfilename,filters,nprocesses=1,verbose=True)
-    test = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
+    # customtest = synbiomts.analyze.ModelTest(models,dbfilename,filters,nprocesses=1,verbose=True)
+    test = synbiomts.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
     test.run()
 
     # Let's fit the NanoLuc data to determine the apparent dG_starts
     '''
     import numpy as np
-    from testsfm import dbms
+    from synbiomts import dbms
 
     calcs = test.predictions[modelName]
     stats = test.statistics[modelName]
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     models.add(RBSCalc_v2_1,start_energies=start_codon_energies)
     modelName = 'RBSCalc_v2_1'
     models.setform([modelName], x='dG_total', y='PROT.MEAN', yScale='ln', a1=-0.45)
-    test = testsfm.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
+    test = synbiomts.analyze.ModelTest(models,dbfilename,filters,add_data=True,verbose=True)
     test.run()
 
     with open("labels/labels1.txt","r") as f:

@@ -5,8 +5,8 @@ sys.path.append('../models')
 sys.path.append('../datasets')
 sys.path.append('/usr/local/lib/python2.7/site-packages/')
 
-import testsfm
-from testsfm import dbms
+import synbiomts
+from synbiomts import dbms
 import cPickle as pickle
 # import TranslationRateModels as tl
 
@@ -282,7 +282,7 @@ def _calc_warning_flags(RBS):
 def main():
 
     # Add models to interface.Container()
-    models = testsfm.interface.Container()
+    models = synbiomts.interface.Container()
     models.add(RBSCalc_v1)
     models.add(RBSCalc_v1_1)
     models.add(RBSCalc_v2)
@@ -311,12 +311,12 @@ def main():
     # Provide the pickled database file name
     dbfilename = '../geneticsystems.db'
 
-    # customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
-    customtest = testsfm.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=10, verbose=True)
+    # customtest = synbiomts.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=1,verbose=True)
+    customtest = synbiomts.analyze.ModelTest(transl_rate_models,dbfilename,filters,nprocesses=10, verbose=True)
     customtest.run(filename='model_calcs.db')
 
     # Initialize ModelTestSystem and run (automates model and stat calcs)
-    ModelTestSystem = testsfm.analyze.ModelTest(models,dbfilename,filters,verbose=True)
+    ModelTestSystem = synbiomts.analyze.ModelTest(models,dbfilename,filters,verbose=True)
     ModelTestSystem.run(filename='model_calcs.db')
 
 def data_for_RBSDesigner():
