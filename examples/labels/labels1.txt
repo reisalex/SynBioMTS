@@ -16,6 +16,7 @@ dG_total
 dG_mRNA
 dG_mRNA_rRNA
 dG_spacing
+dG_stack
 dG_start
 dG_standby
 dG_distortion
@@ -31,9 +32,9 @@ most_3p_paired_SD_mRNA
 most_5p_paired_SD_mRNA
 spacing_length
 BAD_SEQUENCE
-CDS LONG_RBS_HAIRPIN
+LONG_RBS_HAIRPIN
 MINIMAL_ssRNA
-PREDICTED_LOW_TRANSL_RATE
+LOW_TRANSL_RATE
 STABLE_STANDBY_SITE_REFOLD
 RBS_hairpin_lengths
 ssRNA_lengths

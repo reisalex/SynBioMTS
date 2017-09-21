@@ -369,13 +369,26 @@ class ModelTest(object):
         (_,F,F_pval) = stats.vartest2(x,y,logNormal=True,test="F")
         (_,t,t_pval) = stats.ttest2(x,y)
         
-        R2 = list(self.statistics[modelNames[0]]['Pearson R-squared'])[-1]
+        R2_1 = list(self.statistics[modelNames[0]]['Pearson R-squared'])[-1]
+        R2_2= list(self.statistics[modelNames[1]]['Pearson R-squared'])[-1]
         mean1 = np.mean(x)
         mean2 = np.mean(y)
         var1 = np.exp(np.var(np.log(x)))
         var2 = np.exp(np.var(np.log(y)))
 
-        print "{}\t{}\t{}\t\t{}\t{}\t{}\t{}".format(R2,mean1,var1,F,F_pval,t,t_pval)
+        output = {
+                'R2_1': R2_1,
+                'R2_2': R2_2,
+                'mean1': mean1,
+                'mean2': mean2,
+                'var1': var1,
+                'var2': var2,
+                'F-statistic': F,
+                'pval(F)': F_pval,
+                't-statistic': t,
+                'pval(t)': t_pval}
+
+        return output
 
     def to_shelve(self,filename):
         '''Export model predictions to shelve.
