@@ -298,6 +298,7 @@ class ModelTest(object):
                                                       positions=df["STARTPOS"])
             if data["valid dataset"]:
                 data["MC"] = data["Sequence entropy"]*(data["N-states"]-1)*data["RIG"]
+                print m, data["MC"]
             else:
                 data["MC"] = 0.0
             entries.append(data)

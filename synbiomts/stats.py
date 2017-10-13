@@ -543,11 +543,6 @@ def linear_simple(xVals,yVals,ystd,xScale='linear',yScale='linear'):
     threshold = (max(yVals) + min(yVals))/2.0
     auroc,fpr,tpr,thresholds = area_under_ROC_curve(xVals,yVals,cutoff=threshold)
 
-    print " "
-    for x,y in zip(fpr,tpr):
-        print x,y
-    print " "
-
     # Relative entropy gain over uniform model
     # Relative information gain (RIG) over uniform model
     # remove nans from ystd
