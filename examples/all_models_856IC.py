@@ -271,7 +271,7 @@ def _calc_warning_flags(RBS):
         if x > y0:
             warning_dict["ssRNA_lengths"].append(x-y0)
             y0 = y
-    if any(length > cutoff for length in warning_dict["ssRNA_lengths"]):
+    if not any(length > cutoff for length in warning_dict["ssRNA_lengths"]):
         warning_dict["MINIMAL_ssRNA"] = True
     else:
         warning_dict["MINIMAL_ssRNA"] = False
