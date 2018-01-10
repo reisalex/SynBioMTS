@@ -438,12 +438,24 @@ class ModelTest(object):
         if predictColumns:
             for model in models:
                 self.predictions[model].to_excel(writer,sheet_name=model,columns=predictColumns)
+        else:
+            for model in models:
+                self.predictions[model].to_excel(writer,sheet_name=model)
+            
         if statsColumns:        
             for model in models:
                 if model in self.statistics.keys(): 
                     self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model),columns=statsColumns)
                 else:
                     print "Functional form for {} was not specified. Not writing stats.".format(model)
+        else:
+            for model in models:
+                if model in self.statistics.keys():
+                    print "WRITING STATISTICS"
+                    self.statistics[model].to_excel(writer,sheet_name="{}-stats".format(model))
+                else:
+                    print "Functional form for {} was not specified. Not writing stats.".format(model)
+
         writer.save()
 
     def add_datasets(self,datasets):
