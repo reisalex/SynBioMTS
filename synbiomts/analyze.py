@@ -94,17 +94,17 @@ class ModelTest(object):
             for model in self.models.available:
                 if model in d.keys():
                     kargs = {i: d[model][i] for i in self.identifiers}
-                    db = dbms.remove(db,kargs,ordered=True)
-                    dict_list = dbms.to_dict_list(db)
+                    db.remove_data(kargs,ordered=True)
+                    dict_list = db.get_entries()
                     n_entries.append((model,len(dict_list)))
                     bundles += [(model,entry) for entry in dict_list]
                 else:
-                    dict_list = dbms.to_dict_list(db)
+                    dict_list = db.get_entries()
                     bundles += product([model],dict_list)
                     n_entries.append((model,len(dict_list)))
             d.close()
         else:
-            dict_list = dbms.to_dict_list(db)
+            dict_list = db.get_entries()
             bundles = product(self.models.available,dict_list)
             n = len(dict_list)
             n_entries = [(m,n) for m in self.models.available]
@@ -117,16 +117,16 @@ class ModelTest(object):
             pool.join()
         else:
             output = [self._wrap(bundle) for bundle in bundles]
-        
+
         # Convert model predictions (list of dictionaries) to pandas dataframes
-        db.reset_index(drop=True, inplace=True)
+        db.data.reset_index(drop=True, inplace=True)
         total = 0
         for model,n in n_entries:
             modelcalcs = pandas.DataFrame(output[total:total+n])
             if self.add_data:
-                dfsave = pandas.concat([db, modelcalcs], axis=1)
+                dfsave = pandas.concat([db.data, modelcalcs], axis=1)
             else:
-                dfsave = pandas.concat([db[self.identifiers], modelcalcs], axis=1)
+                dfsave = pandas.concat([db.data[self.identifiers], modelcalcs], axis=1)
             self.predictions[model] = dfsave
             total += n
 
@@ -190,9 +190,14 @@ class ModelTest(object):
                 raise ValueError(error)
 
         # Use filters specified by user on database
+        # if self.filters:
+        #     database.filter(self.filters,False)
+
         if self.filters:
-            database = dbms.filter(database,self.filters,False)
-        self.database = database
+            for key,valuelist in self.filters.iteritems():
+                database = database[database[key].isin(valuelist)].reset_index()
+
+        self.database = dbms.DataBase(database)
 
     def calc_stats(self,filename=None):
         ''' calc_stats runs stats.linear_complete for models with defined 
@@ -212,7 +217,7 @@ class ModelTest(object):
             for subgroup in df["SUBGROUP"].unique():
 
                 # Extract subgroup data & predictions
-                indx = df["SUBGROUP"] == subgroup
+                indx = np.array(df["SUBGROUP"] == subgroup)
                 x = np.array(df[self.models[m].x][indx])
                 y = np.array(df[self.models[m].y][indx])
                 std = np.array(df[self.models[m].std][indx])
@@ -258,7 +263,7 @@ class ModelTest(object):
                     # Add yError and yPredicted to model predictions
                     allError[indx] = yErrorAll
                     allPredicted[indx] = yPredicted
-
+                    
                 # Define subgroup, number of non-predicted sequence, and sequence entropy
                 data["SUBGROUP"] = subgroup
                 data["Count.Invalid"] = count_invalid

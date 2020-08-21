@@ -432,9 +432,7 @@ def linear_complete(xVals,yVals,ystd,xScale='linear',yScale='linear',slope=None)
     RMSE = np.sqrt(1-R**2.0)*np.std(yVals)
 
     # One-sided model error cdfs
-    yError1 = list(yError)
-    indx = yError1 < 1
-    yError1[indx] = 1/yError1[indx]
+    yError1 = np.array([1/val if val < 1 else val for val in yError])
     bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
     onesided_cdf,_ = empirical_cdf(yError1,bins)
 
@@ -507,6 +505,8 @@ def linear_complete(xVals,yVals,ystd,xScale='linear',yScale='linear',slope=None)
 
 def linear_simple(xVals,yVals,ystd,xScale='linear',yScale='linear'):
 
+    yError = yVals/xVals
+
     if yScale == 'log10':    yVals = np.log10(yVals)
     elif yScale == 'ln':     yVals = np.log(yVals)
     elif yScale == 'linear': pass
@@ -529,10 +529,7 @@ def linear_simple(xVals,yVals,ystd,xScale='linear',yScale='linear'):
     RMSE = np.sqrt(1-R**2.0)*np.std(yVals)
 
     # One-sided model error cdfs
-    yError = yVals/xVals
-    yError1 = list(yError)
-    indx = yError1 < 1
-    yError1[indx] = 1/yError1[indx]
+    yError1 = np.array([1/val if val < 1 else val for val in yError])
     bins = np.concatenate((np.linspace(1,10,10),np.linspace(20,100,9),np.linspace(200,1000,9)))
     onesided_cdf,_ = empirical_cdf(yError1,bins)
 
