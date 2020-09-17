@@ -61,7 +61,7 @@ def RBSCalcv2(sequence,temperature):
     results = {
     'TIR': RBS.tir,
     'dG_total': RBS.dG_total,
-    'dG_mRNA_rRNA': RBS.dG_mRNA_rRNA',  
+    'dG_mRNA_rRNA': RBS.dG_mRNA_rRNA',
     'dG_mRNA': RBS.dG_mRNA
     }
     return results
@@ -77,9 +77,9 @@ if __name__ == "__main__":
     # specify the form of each model
     # RBS_Calculator is a thermodynamic model where: Protein ~ K*exp(-0.45*dG_total)
     models.setform(['RBSCalcv2'],x='dG_total',y='PROT.MEAN',yScale='ln',a1=-0.45)
-    
+
     # create test system object
-    testsystem = synbiomts.analyze.ModelTest(models,'geneticsystems.db')
+    testsystem = synbiomts.analyze.ModelTest(models,'geneticsystems.db',add_data=True,verbose=True)
     
     # run model predictions and statistics calculations 
     testsystem.run()

@@ -56,62 +56,83 @@ class PyVRNA(object):
     Usage: object_name = PyVRNA(temperature=float, dangles=int, gquad=bool, parameter_file=string, test_inputs=bool)
            object_name.function_name(parameters)
     """
-    def __init__(self, temperature=37.0, dangles=2, gquad=False, parameter_file="rna_andronescu2007.par", duplex_adjustment=True, test_inputs=False, enforce_constraints=True):
+    def __init__(self,
+        temperature=37.0,
+        dangles=2,
+        noGU=False,
+        gquad=False,
+        parameter_file="rna_andronescu2007.par",
+        duplex_adjustment=True,
+        test_inputs=False,
+        enforce_constraints=False,
+        pyindex=False):
         """
         Initializes an PyVRNA object, after validating all parameters.
 
         Usage: energy_model = PyVRNA(temperature=int, dangles=int, gquad=bool, parameter_file=string, test_inputs=bool)
         """
         # Setup variables for helping in assertions
-        self.parameter_files            = ["dna_mathews1999.par",
-                                           "rna_turner1999.par",
-                                           "dna_mathews2004.par",
-                                           "rna_turner2004.par",
-                                           "rna_andronescu2007.par"]
-        self.parameter_directory        =  "/usr/local/share/ViennaRNA/"
+        self.parameter_files     = ["dna_mathews1999.par",
+                                    "rna_turner1999.par",
+                                    "dna_mathews2004.par",
+                                    "rna_turner2004.par",
+                                    "rna_andronescu2007.par"]
+        self.parameter_directory =  "/usr/local/share/ViennaRNA/"
         
         # Assert all supplied variables for correctness
         assert 0 < temperature,                                'temperature must be greater than 0.'
-        assert 0 <= dangles <= 2 and isinstance(dangles, int), 'dangles must be one of the three integers: 0 (none), 1 (some), or 2 (all).'
+        assert 0 <= dangles <= 3 and isinstance(dangles, int), 'dangles must be one of the three integers: 0 (none), 1 (some), 2 (all), or 3 (all + coaxial stacking of multi-branch loops)'
+        assert isinstance(noGU, bool),                         'noGU must be a boolean value.'
         assert isinstance(gquad, bool),                        'gquad must be a boolean value.'
         assert parameter_file in self.parameter_files,         ''.join(['parameter file must be ', " or ".join(self.parameter_files), '.'])
         if parameter_file + ".par" in self.parameter_files:
             parameter_file += ".par"
-        assert isinstance(test_inputs, bool),                  'test_inputs must be a boolean value.'
+        assert isinstance(duplex_adjustment, bool),            'duplex_adjustment must be a boolean value.'
+        assert isinstance(test_inputs, bool),                  'test_inputs must be a boolean value.'        
+        assert isinstance(enforce_constraints, bool),          'enforce_constraints must be a boolean value.'
+        assert isinstance(pyindex, bool),                      'pyindex must be a boolean value.'
         
-        # Setup model default settings variables
-        self.settings                   = RNA.md()
-        self.settings.temperature       = temperature   # Temperature in Celsius; default=37.0 (float)
-        self.settings.dangles           = dangles       # Dangling end energies (0,1,2); see RNAlib documentation; default=2 (int)
-        self.settings.gquad             = gquad         # Incoorporate G-Quadruplex formation into structure prediction; default=off/0/False (bool/int)
+        # Setup model default settings and variables
+        self.settings             = RNA.md()
+        self.settings.temperature = temperature   # Temperature in Celsius; default=37.0 (float)
+        self.settings.dangles     = dangles       # Dangling end energies (0,1,2); see RNAlib documentation; default=2 (int)
+        self.settings.gquad       = gquad         # Incorporate G-Quadruplex formation into structure prediction; default=off/0/False (bool/int)
+        self.settings.noGU        = noGU          # Toggles GU wobble for RNA folding processes ... probably need to test this
+        RNA.cvar.temperature      = temperature   # Global setting of temperature
+        RNA.cvar.dangles          = dangles       # Global setting of dangles
+        RNA.cvar.gquad            = gquad         # Global setting of gquad
+        RNA.cvar.noGU             = noGU         # Global setting of gquad
         
-        # Other settings variables available for manual overriding
-        # self.settings.betaScale       = 1.0       # Set the scaling of the Boltzmann factors; default=1.0 (float)
-        # self.settings.special_hp      = True      # Include tabulated free energies for special hairpin loops (Tri-, Tetra-, or Hexa-loops); default=on/1/True (bool/int)
-        # self.settings.noLP            = False     # Produce structures without lonely pairs (helices of length 1); default=off/0/False (bool/int)
-        # self.settings.noGU            = False     # Do not allow GU wobble pairs; default=off/0/False (bool/int)
-        # self.settings.noGUclosure     = False     # Do not allow GU pairs at the end of helices; default=off/0/False (bool/int)
-        # self.settings.logML           = False     # Recompute free energies of multi-branch loops using a logarithmic model; default=off/0/False (bool/int)
-        # self.settings.circ            = False     # Assume a circular (instead of linear) RNA molecule; default=off/0/False (bool/int)
-        # self.settings.canonicalBPonly = False     # Remove non-canonical base pairs from the structure constraint; default=off/0/False (bool/int)
-        # self.settings.uniq_ML         = False     # Create additional matrix for unique multi-branch loop prediction; default=off/0/False (bool/int)
-        # self.settings.energy_set      = 0         # Energy set, rarely used, see --energyModel; default=0 (int)
-        # self.settings.backtrack       = 1         # Whether to backtrack secondary structures; default=1 (int)
-        # self.settings.backtrack_type  = 'F'       # Set backtrack type, i.e. which DP matrix is used; default='F' (str)
-        # self.settings.compute_bpp     = True      # Compute base pair probabilities after partition function computation; default=on/1/True (bool/int)
-        # self.settings.max_bp_span     = -1        # Maximum base pair span; default=-1 (int)
-        # self.settings.min_loop_size   = 3         # Minimal loop size; default=3 (int)
-        # self.settings.window_size     = -1        # Window size for sliding window structure prediction approaches; default=-1 (int)
-        # self.settings.oldAliEn        = False     # Use old energy model for comparative structure prediction; default=off/0/False  (bool/int)
-        # self.settings.ribo            = False     # Use Ribosum Scoring in comparative structure prediction; default=off/0/False (bool/int)
-        # self.settings.cv_fact         = 1.0       # Co-variance scaling factor used in comparative structure prediction; default=1.0 (float)
-        # self.settings.nc_fact         = 1.0       # Unknown (not well defined in docs); likely for comparative structure prediction; default=1.0 (float)
-        # self.settings.sfact           = 1.07      # Scaling factor used to avodi under-/overflows in partition function computation; default=1.07 (float)
+        '''
+        Other settings variables available for manual overriding
+        self.settings.betaScale       = 1.0       # Set the scaling of the Boltzmann factors; default=1.0 (float)
+        self.settings.special_hp      = True      # Include tabulated free energies for special hairpin loops (Tri-, Tetra-, or Hexa-loops); default=on/1/True (bool/int)
+        self.settings.noLP            = False     # Produce structures without lonely pairs (helices of length 1); default=off/0/False (bool/int)
+        self.settings.noGU            = False     # Do not allow GU wobble pairs; default=off/0/False (bool/int)
+        self.settings.noGUclosure     = False     # Do not allow GU pairs at the end of helices; default=off/0/False (bool/int)
+        self.settings.logML           = False     # Recompute free energies of multi-branch loops using a logarithmic model; default=off/0/False (bool/int)
+        self.settings.circ            = False     # Assume a circular (instead of linear) RNA molecule; default=off/0/False (bool/int)
+        self.settings.canonicalBPonly = False     # Remove non-canonical base pairs from the structure constraint; default=off/0/False (bool/int)
+        self.settings.uniq_ML         = False     # Create additional matrix for unique multi-branch loop prediction; default=off/0/False (bool/int)
+        self.settings.energy_set      = 0         # Energy set, rarely used, see --energyModel; default=0 (int)
+        self.settings.backtrack       = 1         # Whether to backtrack secondary structures; default=1 (int)
+        self.settings.backtrack_type  = 'F'       # Set backtrack type, i.e. which DP matrix is used; default='F' (str)
+        self.settings.compute_bpp     = True      # Compute base pair probabilities after partition function computation; default=on/1/True (bool/int)
+        self.settings.max_bp_span     = -1        # Maximum base pair span; default=-1 (int)
+        self.settings.min_loop_size   = 3         # Minimal loop size; default=3 (int)
+        self.settings.window_size     = -1        # Window size for sliding window structure prediction approaches; default=-1 (int)
+        self.settings.oldAliEn        = False     # Use old energy model for comparative structure prediction; default=off/0/False  (bool/int)
+        self.settings.ribo            = False     # Use Ribosum Scoring in comparative structure prediction; default=off/0/False (bool/int)
+        self.settings.cv_fact         = 1.0       # Co-variance scaling factor used in comparative structure prediction; default=1.0 (float)
+        self.settings.nc_fact         = 1.0       # Unknown (not well defined in docs); likely for comparative structure prediction; default=1.0 (float)
+        self.settings.sfact           = 1.07      # Scaling factor used to avodi under-/overflows in partition function computation; default=1.07 (float)
+        '''
 
         # Setup model constraint variables
         self.enforce_constraints        = enforce_constraints
         self.constraints_options        = 16760832 # Not a mysterious value, see the macro values defined in '.../ViennaRNA-2.3.4/src/ViennaRNA/constraints_hard.h'
-        
+        self.pyindex                    = pyindex  # Global boolean for Python based 0-indexing or 1-indexing
+
         # Setup model parameter file and test_input variables
         RNA.read_parameter_file(self.parameter_directory+parameter_file)
         self.test_inputs                = test_inputs
@@ -122,6 +143,7 @@ class PyVRNA(object):
 
         # Setup result structures as namedtuples
         self.PyVRNA_fold_result         = namedtuple('PyVRNA_fold_result',     'structure energy')
+        self.PyVRNA_inverse_result      = namedtuple('PyVRNA_inverse_result',  'sequence distance')
         self.PyVRNA_centroid_result     = namedtuple('PyVRNA_centroid_result', 'structure energy distance')
         self.PyVRNA_ensemble_result     = namedtuple('PyVRNA_ensemble_result', 'structure energy')
         self.PyVRNA_bp_result           = namedtuple('PyVRNA_bp_result',      'length bpx bpy pkx pky gquad')
@@ -142,10 +164,10 @@ class PyVRNA(object):
         # Check if first item is a string
         assert isinstance(sequence_list[0], str), 'in '+func_name+': sequence[_1] must be a string.'
         
-        # Check if second item (if applicable) is also a string or None (as applicable)
-        type_sequence_2_dict = {'RNAcofold': ['string'], 'RNAeval': ['string', None], 'RNAsubopt': ['string', None]}
-        if func_name in type_sequence_2_dict:
-            assert any(imap(lambda x: isinstance(sequence_list[1], type(x)), type_sequence_2_dict[func_name])), ''.join(['in ', func_name, ': sequence[_2] must be a ', ' or a '.join(imap(str, type_sequence_2_dict[func_name])), ' object.'])
+        # Check if second item (if applicable) is also a string
+        second_seq_funcs_set = {'RNAcofold', 'RNAeval', 'RNAsubopt'}
+        if func_name in second_seq_funcs_set and len(sequence_list) > 1:
+            assert isinstance(sequence_list[1], str), 'in {}: {}sequence[_2] must be a string.'.format(func_name, ['(optional) ', ''][func_name == 'RNAcofold'])
         
         # Check if all sequences are valid
         valid_charset = set('ATGCUatgcu&')
@@ -162,6 +184,10 @@ class PyVRNA(object):
 
         Usage: energy_model._test_non_sequences(non_sequence_list=list, sequence_list=list, func_name=string, test_for=string) # Validates non-sequences for func_name function
         """
+
+        if not non_sequence_list:
+            return
+
         # Check if test_for is structures or constraints
         assert test_for == 'structure' or test_for == 'constraint', ''.join(['in ', func_name, ": test_for must be 'constraint' or 'structure'"])
         
@@ -194,7 +220,11 @@ class PyVRNA(object):
                No external calls are required in order to ensure that non-sequences are valid.
         
         Usage: energy_model._test_non_sequences(non_sequence_list=list, sequence_list=list, func_name=string, test_for=string) # Validates non-sequences for func_name function
-        """        
+        """
+
+        if not aptamers and not aptamer_constraints:
+            return
+
         assert len(aptamers)==len(aptamer_constraints), "Make sure to provide equal number of aptamers and aptamer_constraint values"
         assert len(aptamers)==len(dG_ligands), "Make sure to provide equal number of aptamers and dG_ligand values"
         for aptamer in aptamers:
@@ -221,7 +251,7 @@ class PyVRNA(object):
         See footnote 13: "Based on dimensional analysis, we define our concentrations as mole fractions rather than
         molarities. Therefore, the free energy of strand association for a complex of L strands is..."
         
-        Based on a partition function analysis of dilute solutions of ionteracting strands
+        Based on a partition function analysis of dilute solutions of interacting strands
         in a fixed volume (the "box")
 
         NOTE:  This function is explictly called from other functions in this class that returns minimum free energy of a duplex.
@@ -390,6 +420,24 @@ class PyVRNA(object):
         # Return the fold structure and energy
         return self.PyVRNA_fold_result(structure=structure, energy=energy)
 
+    def RNAinverse(self, sequence, structure):
+        """
+        Computes a sequence conforming to given minimum free energy structure starting from given sequence and its distance to starting sequence
+
+        Usage: inverse_result = energy_model.RNAinverse(sequence, structure)           # Executes RNAinverse
+               inverse_result.structure                                                # Retrieves inverted sequence
+               inverse_result.distance                                                 # Retrieves distance from startng sequence
+               inverse_sequence = energy_model.RNAfold(sequence, constraint).sequence  # Executes RNAinverse and retrieves the sequence only
+        """
+
+        # Test if sequence and constraint is valid
+        # Coming soon
+
+        sequence, distance = RNA.inverse_fold(sequence, structure)
+
+        # Return the sequence and the distance
+        return self.PyVRNA_inverse_result(sequence=sequence, distance=distance)
+
     def RNAsubopt(self, sequences, constraints=[], delta_energy=5, aptamers=[], aptamer_constraints=[], dG_ligands=[]):
         """
         Computes the suboptimal structures for a sequence or duplex with optional constraints within a delta_energy range from its mfe.
@@ -402,6 +450,8 @@ class PyVRNA(object):
                subopt_list[0].energy                                                                                 # Retrieves mfe of 10th suboptimal structure
                subopt_energy_list = [solution.energy for solution in subopt_list]                                     # Filters out mfe of every suboptimal structure
         """
+        # if set("".join(constraints)) == set('.'):
+            # constraints = []
         # Test if sequences, structures and constraints are valid
         if self.test_inputs:
             self._test_sequences(sequence_list=sequences, func_name='RNAsubopt')
@@ -432,7 +482,7 @@ class PyVRNA(object):
         # Return the fold structure and energy of all suboptimal structures
         return subopt_list
 
-    def create_bp_tuple(self, length=[], bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def create_bp_tuple(self,length=[], bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
         """
         Returns a customized bp_tuple from input bpx, bpy, pkx, pky and gquad lists.
 
@@ -447,7 +497,7 @@ class PyVRNA(object):
         # Create and return the customized bp_tuple
         return self.PyVRNA_bp_result (length=length, bpx=list(bpx), bpy=list(bpy), pkx=list(pkx), pky=list(pky), gquad=list(gquad))
 
-    def vienna2bp(self, vienna_string):
+    def vienna2bp(self,vienna_string, pyindex=None):
         """
         Converts the vienna_string (dot bracket string representing a mfe structure) to bp_tuple.
 
@@ -462,6 +512,10 @@ class PyVRNA(object):
                bp_tuple.pky                                                             # Retrieves the pseudo_pair_y_list
                bp_tuple.gquad                                                           # Retrieves the gquad_list
         """
+        # Setup indexing
+        if pyindex is None:
+            pyindex = self.pyindex
+        
         # Test if vienna_string has all valid characters
         if self.test_inputs:
             assert set(vienna_string) <= set('&.([+])'), 'in vienna2bp: vienna_string must be a string of .([+]) characters only.'
@@ -508,17 +562,24 @@ class PyVRNA(object):
         
         # Extract all quadruplex indices in order
         while has_gquad and string_index < len(vienna_string):
-            if vienna_string[string_index] == '+' and (gquad_index == 0 or gquad_index == 2):
+            if vienna_string[string_index] == '+' and \
+                (gquad_index == 0 or gquad_index == 2):
                 if gquad_index == 0:
                     gquad_matrix[0].append(deque()); gquad_matrix[1].append(deque()); gquad_matrix[2].append(deque()); gquad_matrix[3].append(deque())
-                while vienna_string[string_index] == '+':
+                while string_index < len(vienna_string) and \
+                    vienna_string[string_index] == '+':
                     gquad_matrix[gquad_index][-1].append(string_index+1)
                     string_index += 1
                 gquad_index = (gquad_index + 1) % 4
-            elif vienna_string[string_index] == '+' and (gquad_index == 1 or gquad_index == 3):
-                while vienna_string[string_index] == '+':
+            elif vienna_string[string_index] == '+' and \
+                (gquad_index == 1 or gquad_index == 3):
+                #print 'Initial', string_index, len(vienna_string)
+                while string_index < len(vienna_string) and \
+                    vienna_string[string_index] == '+':
                     gquad_matrix[gquad_index][-1].appendleft(string_index+1)
                     string_index += 1
+                    #print 'Updated', string_index, len(vienna_string)
+                #print 'Exited', string_index, len(vienna_string)
                 gquad_index = (gquad_index + 1) % 4
             else:
                 string_index += 1
@@ -527,9 +588,18 @@ class PyVRNA(object):
                 for i in xrange(len(gquad_matrix[0])):
                     bp_tuple.gquad.extend(zip(gquad_matrix[0][i], gquad_matrix[1][i], gquad_matrix[2][i], gquad_matrix[3][i]))
         
+        if pyindex:
+            bpx = [i-1 for i in bp_tuple.bpx]
+            bpy = [j-1 for j in bp_tuple.bpy]
+            pkx = [i-1 for i in bp_tuple.pkx]
+            pky = [j-1 for j in bp_tuple.pky]
+            gquad = [tuple(j-1 for j in i) for i in bp_tuple.gquad]
+
+            bp_tuple = self.create_bp_tuple(length,bpx,bpy,pkx,pky,gquad)
+        #print bp_tuple.gquad
         return bp_tuple
 
-    def bp2vienna(self, length, bpx=[], bpy=[], pkx=[], pky=[], gquad=[]):
+    def bp2vienna(self,length, bpx=[], bpy=[], pkx=[], pky=[], gquad=[], pyindex=None):
         """
         Creates a customized bp_tuple from input bpx, bpy, pkx, pky and gquad lists and returns the vienna_string encoded by it.
 
@@ -537,9 +607,13 @@ class PyVRNA(object):
 
         Usage: custom_vienna_string = energy_model.bp2vienna(bpx=some_list, bpy=some_list) # Executes bp2vienna and returns the vienna_string
         """
+        # Setup indexing
+        if pyindex is None:
+            pyindex = self.pyindex
+
         return self.bptuple2vienna(self.create_bp_tuple(length, bpx, bpy, pkx, pky, gquad))
 
-    def bptuple2vienna(self, bp_tuple):
+    def bptuple2vienna(self, bp_tuple, pyindex=None):
         """
         Converts an bp_tuple to vienna_string (dot bracket string representing a mfe structure).
 
@@ -548,9 +622,21 @@ class PyVRNA(object):
 
         Usage: vienna_string = energy_model.bptuple2vienna(bp_tuple) # Executes bptuple2vienna and retrieves the mfe structure
         """
+        # Setup indexing
+        if pyindex is None:
+            pyindex = self.pyindex
+            
         # Test if vienna_string has all valid characters
         if self.test_inputs:
             self._test_bp_tuple(length=bp_tuple.length, bpx=bp_tuple.bpx, bpy=bp_tuple.bpy, pkx=bp_tuple.pkx, pky=bp_tuple.pky, gquad=bp_tuple.gquad, func_name='bptuple2vienna')
+
+        if pyindex:
+            bpx = [i+1 for i in bp_tuple.bpx]
+            bpy = [j+1 for j in bp_tuple.bpy]
+            pkx = [i+1 for i in bp_tuple.pkx]
+            pky = [j+1 for j in bp_tuple.pky]
+            gquad = [tuple(j+1 for j in i) for i in bp_tuple.gquad]
+            bp_tuple = self.create_bp_tuple(bp_tuple.length,bpx,bpy,pkx,pky,gquad)        
 
         # Place all appropriate symbols in vienna_string_list
         vienna_string_list = ['.'] * sum(bp_tuple.length)
@@ -569,6 +655,7 @@ class PyVRNA(object):
 
         # Return the vienna_string from its list
         return "".join(vienna_string_list)
+
 
 # Legacy
 class ViennaRNA(dict):
@@ -605,7 +692,7 @@ class ViennaRNA(dict):
         structure, energy, distance = energy_model.RNAcentroid(sequence=self["sequences"][0])
 
         # Legacy: Parsing and storing output
-        bp_tuple = energy_model.vienna2bp(structure)
+        bp_tuple = energy_model.vienna2bp(structure, pyindex=False)
         self["program"]                 = "Centroid"
         self["totalnt"]                 = bp_tuple.length
         self["Centroid_energy"]         = [energy]
@@ -616,7 +703,7 @@ class ViennaRNA(dict):
     # Legacy
     def convert_bracket_to_numbered_pairs(self, bracket_string):
         # New: PyVRNA execution
-        bp_tuple = PyVRNA(test_inputs=False).vienna2bp(bracket_string)
+        bp_tuple = PyVRNA(test_inputs=False).vienna2bp(bracket_string, pyindex=False)
         return [bp_tuple.length, bp_tuple.bpx, bp_tuple.bpy, bp_tuple.pkx, bp_tuple.pky]
 
     # Legacy
@@ -624,7 +711,7 @@ class ViennaRNA(dict):
         # New: PyVRNA execution
         energy_model = PyVRNA(test_inputs=False)
         bp_tuple = energy_model.PyVRNA_bp_result(length=strands, bpx=bp_x, bpy=bp_y, pkx=PK_bp_x, pky=PK_bp_y, gquad=Gquad_bp)
-        return energy_model.bptuple2vienna(bp_tuple)
+        return energy_model.bptuple2vienna(bp_tuple,pyindex=False)
 
     # Legacy
     def energy(self, strands, base_pairing_x, base_pairing_y, Temp=37.0, dangles="all"):
@@ -637,7 +724,7 @@ class ViennaRNA(dict):
         # New: PyVRNA execution
         energy_model = PyVRNA(temperature=Temp, dangles=self.dangles_dict[dangles], gquad=self["Gquad"], parameter_file=self["RNA_model_param"], test_inputs=False)
         bp_tuple     = energy_model.PyVRNA_bp_result(length=strands, bpx=base_pairing_x, bpy=base_pairing_y, pkx=[], pky=[], gquad=[])
-        energy       = energy_model.RNAeval(sequences, energy_model.bptuple2vienna(bp_tuple).split('&'))
+        energy       = energy_model.RNAeval(sequences, energy_model.bptuple2vienna(bp_tuple, pyindex=False).split('&'))
 
         # Legacy: Parsing and storing output
         self["program"]              = "energy"
@@ -663,7 +750,7 @@ class ViennaRNA(dict):
             raise ValueError("Three RNA strands are inputted. ViennaRNA does NOT return structure and energy for three sequences in RNA(co)fold.")
 
         # Legacy: Parsing and storing output
-        bp_tuple = energy_model.vienna2bp(structure)
+        bp_tuple = energy_model.vienna2bp(structure, pyindex=False)
         self["program"]            = "mfe"
         self["totalnt"]            = bp_tuple.length
         self["mfe_energy"]         = [energy]
@@ -692,13 +779,14 @@ class ViennaRNA(dict):
         
         # Legacy: Parsing and storing output
         for structure, energy in results:
-            bp_tuple = energy_model.vienna2bp(structure)
+            bp_tuple = energy_model.vienna2bp(structure,pyindex=False)
             self["subopt_energy"].append(energy)
             self["subopt_basepairing_x"].append(bp_tuple.bpx)
             self["subopt_basepairing_y"].append(bp_tuple.bpy)
         self["program"]           = "subopt"
         self["totalnt"]           = strands
         self["subopt_NumStructs"] = len(results)
+
 
 def tests():
     """
@@ -738,12 +826,12 @@ def tests():
     sequence     = 'CGACGUAGAUGCUAGCUGACUCGAUGC'
     energy_model = PyVRNA(dangles=2, gquad=False, parameter_file='rna_turner2004.par')
     cntrd_result = energy_model.RNAcentroid(sequence)
-    assert [cntrd_result.structure, cntrd_result.energy, cntrd_result.distance] == ['(((.(.((.......))..))))....', 1.399999976158142, 3.345900802497657]
+    assert [cntrd_result.structure, cntrd_result.energy, cntrd_result.distance] == ['(((.(.((.......))..))))....', 1.399999976158142, 3.345900802497659]
     energy_model = None
     sequence     = 'CGCAGGGAUACCCGCG' + 'GCGCCCAUAGGGACGC'
     energy_model = PyVRNA(dangles=2, gquad=False, parameter_file='rna_turner2004.par')
     cntrd_result = energy_model.RNAcentroid(sequence)
-    assert [cntrd_result.structure, cntrd_result.energy, cntrd_result.distance] == ['(((.(((...))))))((((((...))).)))', -13.5, 2.4947844957445318]
+    assert [cntrd_result.structure, cntrd_result.energy, cntrd_result.distance] == ['(((.(((...))))))((((((...))).)))', -13.5, 2.4947844957445344]
     energy_model = None
     print 'Good.'
 
@@ -1124,3 +1212,7 @@ def legacy_tests():
 if __name__ == '__main__':
     tests()
     legacy_tests()
+    # model = PyVRNA(temperature=37.0,dangles=0,gquad=False,parameter_file="rna_turner2004.par")
+    # model.RNAsubopt(sequences=['AAGGGCGCGAGC', 'ACCUCCUUA'],constraints=['............','.........'],delta_energy=8.0)
+    # model.RNAsubopt(sequences=['AAGGGCGCGAGC', 'ACCUCCUUA'],constraints=[],delta_energy=8.0)
+

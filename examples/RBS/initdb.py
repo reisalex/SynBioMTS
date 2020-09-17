@@ -20,7 +20,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_NAR_2013'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -38,7 +38,7 @@ def add_dataset(db,datasets):
         
         # Add extended dataset
         paperext = 'EspahBorujeni_NAR_2013_extended'
-        path = '../datasets/{}.xls'.format(paperext)
+        path = 'datasets/{}.xls'.format(paperext)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -60,7 +60,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_NAR_2015'
     
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -93,7 +93,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_JACS_2016'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -122,7 +122,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_Footprint'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -152,7 +152,7 @@ def add_dataset(db,datasets):
     paper = 'EspahBorujeni_Bsubtilis_2016'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -183,7 +183,7 @@ def add_dataset(db,datasets):
     paper = 'Salis_Nat_Biotech_2009'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -230,7 +230,7 @@ def add_dataset(db,datasets):
     paper = 'Farasat_MSB_2014'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -261,7 +261,7 @@ def add_dataset(db,datasets):
     paper = 'Tian_NAR_2015'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -290,7 +290,7 @@ def add_dataset(db,datasets):
     paper = 'Mimee_Cell_Sys_2015'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -320,7 +320,7 @@ def add_dataset(db,datasets):
     paper = 'Bonde_NatMethods_IC_2016'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -349,7 +349,7 @@ def add_dataset(db,datasets):
     paper = 'Egbert_PNAS_2012'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_index(0)
 
@@ -377,7 +377,7 @@ def add_dataset(db,datasets):
     paper = 'Hecht_NAR_2017'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_name('Figure 3B')
         ds = {
@@ -452,7 +452,7 @@ def add_dataset(db,datasets):
     paper = 'Beck_PLoS_2016'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
         sheet = wb.sheet_by_name('Sheet2')
 
@@ -484,7 +484,7 @@ def add_dataset(db,datasets):
     paper = 'Kosuri_PNAS_2013'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
 
         # import promoter and RBS information
@@ -586,7 +586,7 @@ def add_dataset(db,datasets):
     paper = 'Goodman_Science_2013'
 
     if paper in datasets:
-        path = '../datasets/{}.xls'.format(paper)
+        path = 'datasets/{}.xls'.format(paper)
         wb = xlrd.open_workbook(path,'r')
 
         # import Flow-seq required data to replicate calculations
@@ -656,6 +656,81 @@ def add_dataset(db,datasets):
         df = calc_Flowseq(df,data)
         df = filter_Flowseq(df)
         db = db.append(df, ignore_index=True)
+
+
+    '''Mads T Bonde, Margit Pederse, Michael S Klausen, Sheila I Jensen, Tune Wulff, Scott Harrison, Alex T Nielsen, Markus J Herrgard, Morten O A Sommer
+    Predictable tuning of protein expression in bacteria
+    Nature Methods, 13: 3, 233-236, 2016'''
+    # FS data from Bonde et al., Nat Methods
+    paper = 'Bonde_NatMethods_FS_2016'
+
+    if paper in datasets:
+        path = 'datasets/{}.xls'.format(paper)
+        wb = xlrd.open_workbook(path,'r')
+        sheet = wb.sheet_by_index(0)
+
+        ds = {
+            "SD sequence": sheet.col_values(colx=0, start_rowx=1, end_rowx=3864),
+            "5pUTR"      : sheet.col_values(colx=4, start_rowx=1, end_rowx=3864),
+            "CDS"        : sheet.col_values(colx=5, start_rowx=1, end_rowx=3864),
+            "PROT.MEAN"  : sheet.col_values(colx=6, start_rowx=1, end_rowx=3864),
+            "Total count": sheet.col_values(colx=3, start_rowx=1, end_rowx=3864),
+            "PROT.STD"   : None,
+            "PROTEIN"    : "sfGFP",
+            "ORGANISM"   : "Escherichia coli str. K-12 substr. MG1655",
+            "METHOD"     : "Flow-seq",
+            "TEMP"       : 37.0,
+            "PLASMID"    : "pMA1",
+            "DATASET"    : paper
+        }
+
+        ds["SEQUENCE"] = [UTR+CDS for UTR,CDS in zip(ds["5pUTR"],ds["CDS"])]
+        ds["STARTPOS"] = [len(UTR) for UTR in ds["5pUTR"]]
+
+        df = pd.DataFrame(ds)
+
+        # only take variants with >50 reads
+        df = df[df['Total count']>50]
+
+        # compute "normalized" expression values
+        Exp_TTGGGC = float(df.loc[df['SD sequence']=='TTGGGC']['PROT.MEAN'])
+        Exp_AGGAGA = float(df.loc[df['SD sequence']=='AGGAGA']['PROT.MEAN'])
+
+        print Exp_TTGGGC
+        print Exp_AGGAGA
+
+        df['PROT.PERCENT'] = (df['PROT.MEAN']-Exp_TTGGGC)/(Exp_AGGAGA-Exp_TTGGGC)
+
+        db = db.append(df, ignore_index=True)
+
+        print db.head()
+
+    '''Data collected for this work'''
+    for paper in ['Reis1_2018','Reis2_2018']:
+
+        if paper in datasets:
+            path = 'datasets/{}.csv'.format(paper)
+            tempdf = pd.read_csv(path)
+
+            with open('datasets/Reis_mRFP1.fasta') as handle:
+                for line in handle:
+                    CDS = str(line.rstrip()).upper()
+
+            df = pd.DataFrame()
+            df['5pUTR']     = tempdf['UTR']
+            df['CDS']       = tempdf['CDS'].str.upper() + CDS
+            df['PROT.MEAN'] = tempdf['RFP.mean']
+            df['PROT.STD']  = tempdf['RFP.std']
+            df['PROTEIN']   = 'RFP-modified'
+            df['ORGANISM']  = 'Escherichia coli str. K-12 substr. DH10B'
+            df['METHOD']    = 'Individually Characterized'
+            df['TEMP']      = 37.0
+            df['DATASET']   = paper
+
+            df['SEQUENCE'] = df['5pUTR'] + df['CDS']
+            df['STARTPOS'] = df['5pUTR'].map(len)
+
+            db = db.append(df, ignore_index=True)
 
     # Clean up, define categories based on organism/host/dataset
     db = _make_categories(db)
@@ -793,12 +868,18 @@ if __name__ == "__main__":
                 'Hecht_NAR_2017',           # HechtStartCodons
                 'Beck_PLoS_2016',           # Beck Leaderless mRNA
                 'Kosuri_PNAS_2013',         # Kosuri
-                'Goodman_Science_2013'      # Goodman
+                'Goodman_Science_2013',      # Goodman
+                'Reis1_2018',
+                'Reis2_2018'
                 ]
+
+    # datasets = ['Bonde_NatMethods_FS_2016']
 
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
 
-    handle = open('../geneticsystems.db','w')
+    print db.head()
+
+    handle = open('geneticsystems_test.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()

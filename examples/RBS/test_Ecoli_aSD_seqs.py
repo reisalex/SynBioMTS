@@ -1,7 +1,7 @@
 
 import sys
 sys.path.append('../')
-sys.path.append('../models')
+sys.path.append('models')
 # sys.path.append('../datasets')
 # sys.path.append('/usr/local/lib/python2.7/site-packages/')
 
@@ -20,7 +20,7 @@ from DNAc import *
 from PyVRNA import PyVRNA
 RNAEnergyModel = PyVRNA(dangles=0)
 
-handle = open('../models/rRNA_16S_3p_ends.p','r')
+handle = open('models/rRNA_16S_3p_ends.p','r')
 rRNA_16S_3p_ends = pickle.load(handle)
 handle.close()
 
@@ -72,11 +72,11 @@ def find_best_start(mRNA, start_pos, predictions):
 
     return (RBS,best_start_pos)
 
-import RBS_Calculator_v2_2
+import RBS_Calculator_v2_1
 def RBSCalc_v2_1(sequence,rRNA,temp,startpos):
     start_range = [0,startpos+1]
     # rRNA = get_rRNA(organism)
-    model = RBS_Calculator_v2_2.RBS_Calculator(sequence,start_range,rRNA)
+    model = RBS_Calculator_v2_1.RBS_Calculator(sequence,start_range,rRNA)
     model.temp = temp
     model.run()
     output = model.output()
@@ -234,10 +234,47 @@ def test_Bthetaiotaomicron_hypotheses():
     with open("labels/labels_stats.txt","r") as f:
         statsLabels = [x.strip('\n') for x in f.readlines()]
 
-    ModelTestSystem.to_excel('RBSCalc_16SrRNA_Btheta',predictLabels,statsLabels)    
+    ModelTestSystem.to_excel('RBSCalc_16SrRNA_Btheta',predictLabels,statsLabels)
 
+def test_Bthetaiotaomicron_hypotheses_043019():
+
+    ### === Bacteroides thetaiotaomicron hypothesis testing === ###
+
+    filters = {"DATASET": ['Mimee_Cell_Sys_2015']}
+    models = synbiomts.interface.Container()
+
+    # default RBS Calculator model
+    models.add(RBSCalc_v2_1,rRNA='ACCUCCUUU')
+    models.changeName('RBSCalc_v2_1','RBSCalc_v2_1_default')
+
+    # RBS Calculator using 13 nt 16S rRNA sequence
+    models.add(RBSCalc_v2_1,rRNA='ACCUCUUCC')
+    models.changeName('RBSCalc_v2_1','RBSCalc_v2_1_alt')
+
+    # Prediction using only ddG_structure
+    models.add(StructureOnlyModel)
+
+    modelNames = ['RBSCalc_v2_1_default','RBSCalc_v2_1_alt','StructureOnlyModel']
+    models.setform(modelNames, x="dG_total", y="PROT.MEAN", std="PROT.STD", yScale='ln', a1=-0.45)
+
+    dbfilename = 'geneticsystems.db'
+    ModelTestSystem = synbiomts.analyze.ModelTest(models,dbfilename,filters,verbose=True)
+    ModelTestSystem.run()    
+
+    for modelName in modelNames:
+        ModelTestSystem.compare2models(modelNames=[modelName,'RBSCalc_v2_1_default'])
+
+    for modelName in modelNames:
+        ModelTestSystem.compare2models(modelNames=[modelName,'StructureOnlyModel'])
+
+    # Write model predictions and statistics to Excel
+    with open("labels/labels1.txt","r") as f:
+        predictLabels = [x.strip('\n') for x in f.readlines()]
+    with open("labels/labels_stats.txt","r") as f:
+        statsLabels = [x.strip('\n') for x in f.readlines()]
+
+    ModelTestSystem.to_excel('RBSCalc_16SrRNA_Btheta_043019',predictLabels,statsLabels)
 
 if __name__ == "__main__":
-
     # test_Ecoli_hypotheses()
-    test_Bthetaiotaomicron_hypotheses()
+    test_Bthetaiotaomicron_hypotheses_043019()
