@@ -877,9 +877,7 @@ if __name__ == "__main__":
 
     db = pd.DataFrame()
     db = add_dataset(db,datasets)
-
-    print db.head()
-
-    handle = open('geneticsystems_test.db','w')
+    
+    handle = open('geneticsystems.db','w')
     pickle.dump(db,handle,protocol=2)
     handle.close()
